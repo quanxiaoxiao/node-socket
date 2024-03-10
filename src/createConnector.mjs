@@ -36,7 +36,8 @@ const createConnector = (
     isConnect: false,
     isConnectActive: false,
     isActive: true,
-    isErrorEventBind: false,
+    isConnectEventBind: false,
+    isErrorEventBind: true,
     isEndEventBind: false,
     isSignalEventBind: false,
     socket,
@@ -56,6 +57,10 @@ const createConnector = (
     const eventNames = socket.eventNames();
     if (eventNames.includes('timeout')) {
       socket.off('timeout', handleTimeout);
+    }
+    if (state.isConnectEventBind) {
+      state.isConnectEventBind = false;
+      socket.off('connect', handleConnect);
     }
     if (state.isEndEventBind) {
       state.isEndEventBind = false;
@@ -77,16 +82,16 @@ const createConnector = (
 
   function handleError(error) {
     state.isErrorEventBind = false;
-    if (close()) {
+    if (doClose()) {
       clearEventsListener();
       emitError(error);
     }
   }
 
-  state.isErrorEventBind = true;
   socket.once('error', handleError);
 
   if (socket.connecting) {
+    state.isConnectEventBind = true;
     socket.once('connect', handleConnect);
   } else {
     handleConnect();
@@ -100,10 +105,13 @@ const createConnector = (
   }
 
   function handleConnect() {
+    if (state.isConnectEventBind) {
+      state.isConnectEventBind = false;
+    }
     if (state.isActive) {
       assert(!state.isConnect);
       if (!socket.remoteAddress) {
-        close();
+        doClose();
         emitError(new SocketConnectError('socket get remote address fail'));
         destroy();
       } else {
@@ -124,7 +132,7 @@ const createConnector = (
               try {
                 onConnect();
               } catch (error) {
-                close();
+                doClose();
                 destroy();
               }
             }
@@ -146,7 +154,7 @@ const createConnector = (
   }
 
   function handleClose() {
-    if (close() && onClose) {
+    if (doClose() && onClose) {
       onClose();
     }
     unbindSocketError();
@@ -174,13 +182,13 @@ const createConnector = (
     }
   }
 
-  function close() {
+  function doClose() {
+    if (state.isSignalEventBind) {
+      state.isSignalEventBind = false;
+      signal.removeEventListener('abort', handleAbortOnSignal);
+    }
     if (state.isActive) {
       state.isActive = false;
-      if (state.isSignalEventBind) {
-        state.isSignalEventBind = false;
-        signal.removeEventListener('abort', handleAbortOnSignal);
-      }
       return true;
     }
     return false;
@@ -194,7 +202,7 @@ const createConnector = (
         }
       } catch (error) {
         clearEventsListener();
-        close();
+        doClose();
         destroy();
       }
     } else {
@@ -220,7 +228,7 @@ const createConnector = (
   }
 
   function connector() {
-    if (close()) {
+    if (doClose()) {
       if (state.isConnectActive) {
         clearEventsListener();
       } else if (socket.connecting) {
@@ -251,7 +259,7 @@ const createConnector = (
       connector();
     } else {
       clearEventsListener();
-      close();
+      doClose();
       if (socket.writable) {
         state.isEndEventBind = true;
         socket.once('end', handleSocketEnd);
@@ -265,8 +273,6 @@ const createConnector = (
       }
     }
   };
-
-  connector.getState = () => state;
 
   function handleAbortOnSignal() {
     state.isSignalEventBind = false;
