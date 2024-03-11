@@ -89,7 +89,7 @@ const createConnector = (
     }
   }
 
-  function handleConnect() {
+  async function handleConnect() {
     if (state.isConnectEventBind) {
       state.isConnectEventBind = false;
       if (state.isActive) {
@@ -97,6 +97,36 @@ const createConnector = (
       }
     }
     if (state.isActive) {
+      if (state.isActive) {
+        if (onConnect) {
+          try {
+            await onConnect();
+          } catch (error) {
+            if (doClose()) {
+              onError(error);
+            }
+            clearEventsListener();
+            if (!socket.destroyed) {
+              socket.destroy();
+            }
+            unbindSocketError();
+          }
+        }
+        if (state.isActive) {
+          state.isConnectActive = true;
+          socket.on('data', handleData);
+          if (timeout != null) {
+            socket.setTimeout(timeout);
+            socket.once('timeout', handleTimeout);
+          }
+          socket.on('drain', handleDrain);
+          process.nextTick(() => {
+            if (socket.isPaused()) {
+              socket.resume();
+            }
+          });
+        }
+      }
       while (state.isActive
           && state.outgoingBufList.length > 0
       ) {
@@ -105,36 +135,6 @@ const createConnector = (
           socket.write(chunk);
         }
       }
-      process.nextTick(async () => {
-        if (state.isActive) {
-          if (onConnect) {
-            try {
-              await onConnect();
-            } catch (error) {
-              if (doClose()) {
-                onError(error);
-              }
-              clearEventsListener();
-              if (!socket.destroyed) {
-                socket.destroy();
-              }
-              unbindSocketError();
-            }
-          }
-          if (state.isActive) {
-            state.isConnectActive = true;
-            socket.on('data', handleData);
-            if (timeout != null) {
-              socket.setTimeout(timeout);
-              socket.once('timeout', handleTimeout);
-            }
-            socket.on('drain', handleDrain);
-            if (socket.isPaused()) {
-              socket.resume();
-            }
-          }
-        }
-      });
     } else if (!socket.destroyed) {
       socket.destroy();
     }
