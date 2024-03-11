@@ -21,7 +21,7 @@ const createConnector = (
   assert(socket.writable && socket.readable);
 
   const {
-    timeout = 1000 * 60,
+    timeout,
     onConnect,
     onData,
     onDrain,
