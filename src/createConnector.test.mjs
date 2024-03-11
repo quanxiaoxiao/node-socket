@@ -208,3 +208,66 @@ test('createConnector, socket already connect', async () => {
 
   server.close();
 });
+
+test('createConnector, onConnect trigger error', async () => {
+  const port = getPort();
+  const handleDataOnSocket = mock.fn(() => {});
+  const handleCloseOnSocket = mock.fn(() => {});
+  const server = net.createServer((socket) => {
+    socket.on('data', handleDataOnSocket);
+    setTimeout(() => {
+      socket.write(Buffer.from('aabbcc'));
+    }, 10);
+    socket.on('close', handleCloseOnSocket);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onConnect = mock.fn(async () => {
+    assert(socket.eventNames().includes('close'));
+    assert(socket.eventNames().includes('error'));
+    await waitFor(200);
+    assert(!socket.eventNames().includes('data'));
+    assert(!socket.eventNames().includes('drain'));
+    throw new Error('aaaa');
+  });
+
+  const onData = mock.fn(() => {});
+
+  const onClose = mock.fn(() => {});
+
+  const onError = mock.fn((error) => {
+    assert.equal(error.message, 'aaaa');
+    assert(!socket.eventNames().includes('close'));
+  });
+
+  const connector = createConnector(
+    {
+      onConnect,
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  connector.write(Buffer.from('777'));
+
+  await waitFor(400);
+
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onData.mock.calls.length, 0);
+  assert.equal(handleCloseOnSocket.mock.calls.length, 1);
+  assert.equal(handleDataOnSocket.mock.calls.length, 0);
+  assert(!socket.eventNames().includes('error'));
+
+  server.close();
+});
