@@ -102,14 +102,14 @@ const createConnector = (
           try {
             await onConnect();
           } catch (error) {
-            if (doClose()) {
-              onError(error);
-            }
             clearEventsListener();
             if (!socket.destroyed) {
               socket.destroy();
             }
             unbindSocketError();
+            if (doClose()) {
+              onError(error);
+            }
           }
         }
         if (state.isActive) {
