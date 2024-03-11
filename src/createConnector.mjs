@@ -141,9 +141,6 @@ const createConnector = (
   }
 
   function handleClose() {
-    if (doClose() && onClose) {
-      onClose();
-    }
     if (!state.isEventsClear) {
       state.isEventsClear = true;
       if (state.isConnectActive) {
@@ -153,6 +150,9 @@ const createConnector = (
           socket.off('timeout', handleTimeout);
         }
       }
+    }
+    if (doClose() && onClose) {
+      onClose();
     }
     unbindSocketError();
   }
