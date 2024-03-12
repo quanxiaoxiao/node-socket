@@ -404,6 +404,11 @@ test('createConnector, stream outgoing', async () => {
   const onError = mock.fn(() => {});
   const onData = mock.fn(() => {});
 
+  server.on('close', () => {
+    assert.equal(onClose.mock.calls.length, 0);
+    assert.equal(onError.mock.calls.length, 0);
+  });
+
   let i = 0;
   let isPause = false;
   const onDrain = mock.fn(() => {
