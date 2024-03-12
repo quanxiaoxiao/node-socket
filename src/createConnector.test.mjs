@@ -379,10 +379,11 @@ test('createConnector, stream outgoing', async () => {
   const handleCloseOnSocket = mock.fn(() => {});
   const pathname = path.resolve(process.cwd(), `test_${Date.now()}_111`);
   const ws = fs.createWriteStream(pathname);
+  const count = 5000;
   const handleFinishOnWriteStream = mock.fn(() => {
     const s = fs.readFileSync(pathname).toString();
     assert(/^-- start --/.test(s));
-    assert(/:999$/.test(s));
+    assert(new RegExp(`:${count - 1}$`).test(s));
     setTimeout(() => {
       fs.unlinkSync(pathname);
     }, 100);
@@ -425,7 +426,7 @@ test('createConnector, stream outgoing', async () => {
   connector.write(Buffer.from('-- start --'));
   const content = 'aabbccddee';
   function walk() {
-    while (i < 1000 && !isPause) {
+    while (i < count && !isPause) {
       const s = `${_.times(800).map(() => content).join('')}:${i}`;
       const ret = connector.write(Buffer.from(s));
       if (ret === false) {
@@ -433,7 +434,7 @@ test('createConnector, stream outgoing', async () => {
       }
       i++;
     }
-    if (i >= 1000) {
+    if (i >= count) {
       assert(socket.eventNames().includes('close'));
       assert(socket.eventNames().includes('data'));
       assert(socket.eventNames().includes('drain'));
