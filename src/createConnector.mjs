@@ -29,6 +29,8 @@ const createConnector = (
     onError,
   } = options;
 
+  assert(typeof onData === 'function');
+
   const state = {
     isConnectActive: false,
     isActive: true,
@@ -111,7 +113,7 @@ const createConnector = (
           }
           unbindSocketError();
           if (doClose()) {
-            onError(error);
+            emitError(error);
           }
         }
       }
@@ -203,7 +205,7 @@ const createConnector = (
       } catch (error) {
         clearEventsListener();
         if (doClose()) {
-          onError(error);
+          emitError(error);
         }
         if (!socket.destroyed) {
           socket.destroy();
@@ -269,7 +271,7 @@ const createConnector = (
     assert(state.isActive && !state.isEndEventBind);
     if (!state.isConnectActive) {
       connector();
-      onError(new Error('socket is not connect'));
+      emitError(new Error('socket is not connect'));
     } else {
       clearEventsListener();
       doClose();

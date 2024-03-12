@@ -365,5 +365,40 @@ test('createConnector, close before connect', async () => {
   await waitFor(100);
   assert.equal(handleCloseOnSocket.mock.calls.length, 0);
   assert(!socket.eventNames().includes('error'));
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
+  server.close();
+});
+
+test('createConnector, stream outgoing', async () => {
+  const port = getPort();
+  const handleCloseOnSocket = mock.fn(() => {});
+  const server = net.createServer((socket) => {
+    socket.on('data', () => {
+    });
+    socket.on('close', handleCloseOnSocket);
+  });
+  server.listen(port);
+  const socket = net.Socket();
+
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+  const onData = mock.fn(() => {});
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+  const connector = createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+  connector.write(Buffer.from('------ start --------'));
+  connector();
+  await waitFor(100);
   server.close();
 });
