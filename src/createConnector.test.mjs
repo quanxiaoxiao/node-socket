@@ -456,3 +456,85 @@ test('createConnector, stream outgoing', async () => {
     walk();
   }, 200);
 });
+
+test('createConnector, stream outgoing 2', async () => {
+  const port = getPort();
+  const handleCloseOnSocket = mock.fn(() => {});
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_222`);
+  const ws = fs.createWriteStream(pathname);
+  const server = net.createServer((socket) => {
+    socket.pipe(ws);
+    socket.on('close', handleCloseOnSocket);
+    socket.on('pause', () => {
+      setTimeout(() => {
+        if (!socket.destroyed) {
+          socket.destroy();
+        }
+      }, 1500);
+    });
+  });
+  server.listen(port);
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  let isClose = false;
+  let i = 0;
+  let isPause = false;
+
+  const onClose = mock.fn(() => {});
+
+  const onError = mock.fn(() => {
+    assert(!socket.eventNames().includes('error'));
+    assert(!socket.eventNames().includes('close'));
+    assert(!socket.eventNames().includes('data'));
+    assert(!socket.eventNames().includes('drain'));
+    assert(socket.destroyed);
+    assert(i > 0);
+    isClose = true;
+    setTimeout(() => {
+      server.close();
+    }, 1000);
+  });
+
+  const onData = mock.fn(() => {});
+
+  server.on('close', () => {
+    setTimeout(() => {
+      fs.unlinkSync(pathname);
+    }, 100);
+    assert.equal(onError.mock.calls.length, 1);
+    assert.equal(onClose.mock.calls.length, 0);
+  });
+
+  const onDrain = mock.fn(() => {
+    isPause = false;
+    walk();
+  });
+  const connector = createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+      onDrain,
+    },
+    () => socket,
+  );
+  connector.write(Buffer.from('-- start --'));
+  const content = 'aabbccddee';
+  function walk() {
+    while (!isPause && !isClose) {
+      const s = `${_.times(800).map(() => content).join('')}:${i}`;
+      const ret = connector.write(Buffer.from(s));
+      if (ret === false) {
+        isPause = true;
+      }
+      i++;
+    }
+  }
+  setTimeout(() => {
+    walk();
+  }, 200);
+});
