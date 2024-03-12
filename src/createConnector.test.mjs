@@ -328,3 +328,42 @@ test('createConnector onConnect, wait delay', async () => {
 
   server.close();
 });
+
+test('createConnector, close before connect', async () => {
+  const port = getPort();
+  const handleCloseOnSocket = mock.fn(() => {});
+  const server = net.createServer((socket) => {
+    socket.on('data', () => {
+    });
+    socket.on('close', handleCloseOnSocket);
+  });
+  server.listen(port);
+  const socket = net.Socket();
+
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+  const onData = mock.fn(() => {});
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+  const connector = createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+  connector.write(Buffer.from('------ start --------'));
+  assert(socket.eventNames().includes('connect'));
+  connector();
+  assert(!socket.eventNames().includes('connect'));
+  assert(socket.eventNames().includes('error'));
+  assert(socket.destroyed);
+  await waitFor(100);
+  assert.equal(handleCloseOnSocket.mock.calls.length, 0);
+  assert(!socket.eventNames().includes('error'));
+  server.close();
+});
