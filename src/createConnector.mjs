@@ -96,36 +96,38 @@ const createConnector = (
         socket.once('close', handleClose);
       }
     }
-    if (state.isActive) {
+    if (!state.isActive) {
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+    } else {
+      if (onConnect) {
+        try {
+          await onConnect();
+        } catch (error) {
+          clearEventsListener();
+          if (!socket.destroyed) {
+            socket.destroy();
+          }
+          unbindSocketError();
+          if (doClose()) {
+            onError(error);
+          }
+        }
+      }
       if (state.isActive) {
-        if (onConnect) {
-          try {
-            await onConnect();
-          } catch (error) {
-            clearEventsListener();
-            if (!socket.destroyed) {
-              socket.destroy();
-            }
-            unbindSocketError();
-            if (doClose()) {
-              onError(error);
-            }
-          }
+        state.isConnectActive = true;
+        socket.on('data', handleData);
+        if (timeout != null) {
+          socket.setTimeout(timeout);
+          socket.once('timeout', handleTimeout);
         }
-        if (state.isActive) {
-          state.isConnectActive = true;
-          socket.on('data', handleData);
-          if (timeout != null) {
-            socket.setTimeout(timeout);
-            socket.once('timeout', handleTimeout);
+        socket.on('drain', handleDrain);
+        process.nextTick(() => {
+          if (socket.isPaused()) {
+            socket.resume();
           }
-          socket.on('drain', handleDrain);
-          process.nextTick(() => {
-            if (socket.isPaused()) {
-              socket.resume();
-            }
-          });
-        }
+        });
       }
       while (state.isActive
           && state.outgoingBufList.length > 0
@@ -135,8 +137,6 @@ const createConnector = (
           socket.write(chunk);
         }
       }
-    } else if (!socket.destroyed) {
-      socket.destroy();
     }
   }
 
