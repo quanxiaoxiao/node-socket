@@ -538,3 +538,88 @@ test('createConnector, stream outgoing 2', async () => {
     walk();
   }, 200);
 });
+
+test('createConnector stream incoming', () => {
+  const port = getPort();
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_333`);
+  const ws = fs.createWriteStream(pathname);
+  const content = 'aaaaaaaabbbbbbbcccccc';
+  const count = 8000;
+  let i = 0;
+  const server = net.createServer((socket) => {
+    let isPause = false;
+    let isClose = false;
+    function walk() {
+      while (!isPause && !isClose) {
+        const s = `${_.times(800).map(() => content).join('')}:${i}`;
+        const ret = socket.write(Buffer.from(s));
+        if (ret === false) {
+          isPause = true;
+        }
+        i++;
+      }
+    }
+
+    socket.on('drain', () => {
+      isPause = false;
+      walk();
+    });
+
+    socket.on('close', () => {
+      isClose = true;
+    });
+    setTimeout(() => {
+      walk();
+    }, 50);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const state = {
+    connector: null,
+  };
+
+  const onDrain = mock.fn(() => {
+    state.connector.resume();
+  });
+
+  const onError = mock.fn(() => {});
+
+  const onClose = mock.fn(() => {});
+
+  ws.on('drain', onDrain);
+
+  ws.on('finish', () => {
+    setTimeout(() => {
+      server.close();
+      fs.unlinkSync(pathname);
+      assert(onDrain.mock.calls.length > 0);
+      assert.equal(onClose.mock.calls.length, 0);
+      assert.equal(onError.mock.calls.length, 0);
+    }, 100);
+  });
+
+  state.connector = createConnector(
+    {
+      onData: (chunk) => {
+        if (i >= count) {
+          state.connector.end();
+          ws.end();
+        } else {
+          const ret = ws.write(chunk);
+          if (ret === false) {
+            state.connector.pause();
+          }
+        }
+      },
+      onError,
+      onClose,
+    },
+    () => socket,
+  );
+});
