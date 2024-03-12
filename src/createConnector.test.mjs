@@ -271,3 +271,60 @@ test('createConnector, onConnect trigger error', async () => {
 
   server.close();
 });
+
+test('createConnector onConnect, wait delay', async () => {
+  const port = getPort();
+  const handleDataOnSocket = mock.fn((chunk) => {
+    assert.equal(chunk.toString(), '777');
+  });
+  const handleCloseOnSocket = mock.fn(() => {});
+  const server = net.createServer((socket) => {
+    socket.on('data', handleDataOnSocket);
+    socket.on('close', handleCloseOnSocket);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onConnect = mock.fn(async () => {
+    await waitFor(200);
+  });
+
+  const onData = mock.fn(() => {});
+
+  const onClose = mock.fn(() => {});
+
+  const onError = mock.fn(() => {});
+
+  const connector = createConnector(
+    {
+      onConnect,
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  connector.write(Buffer.from('777'));
+
+  setTimeout(() => {
+    assert.equal(handleDataOnSocket.mock.calls.length, 0);
+  }, 100);
+
+  await waitFor(400);
+
+  assert.equal(handleDataOnSocket.mock.calls.length, 1);
+  assert.equal(handleCloseOnSocket.mock.calls.length, 0);
+  connector();
+  await waitFor(100);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(handleCloseOnSocket.mock.calls.length, 1);
+
+  server.close();
+});
