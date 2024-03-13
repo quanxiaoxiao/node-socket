@@ -199,6 +199,8 @@ test('createConnector, socket already connect', async () => {
     () => socket,
   );
 
+  assert(!socket.eventNames().includes('connect'));
+
   connector.write(Buffer.from('777'));
 
   await waitFor(400);
