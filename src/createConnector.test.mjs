@@ -1175,7 +1175,7 @@ test('createConnector end before connect', async () => {
   server.close();
 });
 
-test('createConnector end', { only: true }, async () => {
+test('createConnector end', async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn((chunk) => {
     assert.equal(chunk.toString(), 'aabb');
@@ -1201,9 +1201,7 @@ test('createConnector end', { only: true }, async () => {
   });
   const onData = mock.fn(() => {});
   const onClose = mock.fn(() => {});
-  const onError = mock.fn((error) => {
-    console.log(error);
-  });
+  const onError = mock.fn(() => {});
 
   state.connector = createConnector(
     {
@@ -1220,5 +1218,57 @@ test('createConnector end', { only: true }, async () => {
   assert.equal(onError.mock.calls.length, 0);
   assert.equal(onClose.mock.calls.length, 0);
   assert.equal(handleDataOnSocket.mock.calls.length, 1);
+  server.close();
+});
+
+test('createConnector end 2', async () => {
+  const port = getPort();
+  const handleDataOnSocket = mock.fn(() => {
+  });
+  const server = net.createServer((socket) => {
+    socket.on('data', handleDataOnSocket);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const state = {
+    connector: null,
+  };
+
+  const onConnect = mock.fn(() => {
+    state.connector.end(Buffer.from('aabb'));
+    assert(!socket.destroyed);
+    assert(socket.eventNames().includes('error'));
+    socket.emit('error', new Error('33333'));
+    assert(socket.destroyed);
+    assert(!socket.eventNames().includes('error'));
+    setTimeout(() => {
+      assert(!socket.eventNames().includes('data'));
+    });
+  });
+  const onData = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+
+  state.connector = createConnector(
+    {
+      onData,
+      onConnect,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  await waitFor(300);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
   server.close();
 });
