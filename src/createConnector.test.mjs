@@ -1302,9 +1302,72 @@ test('createConnector open resume', async () => {
   const onConnect = mock.fn(() => {
     socket.pause();
   });
+  const controller = new AbortController();
   const onData = mock.fn((chunk) => {
     assert.equal(chunk.toString(), 'aabbcc');
   });
+  const onClose = mock.fn(() => {
+    assert(!controller.signal.aborted);
+  });
+  const onError = mock.fn(() => {});
+
+  state.connector = createConnector(
+    {
+      onData,
+      onConnect,
+      onClose,
+      onError,
+      timeout: 1000 * 20,
+    },
+    () => socket,
+    controller.signal,
+  );
+
+  await waitFor(300);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(onData.mock.calls.length, 1);
+  server.close();
+});
+
+test('createConnector end after write', async () => {
+  const port = getPort();
+  const handleDataOnSocket = mock.fn((chunk) => {
+    assert.equal(chunk.toString(), 'ccbb');
+  });
+  const server = net.createServer((socket) => {
+    socket.on('data', handleDataOnSocket);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  await waitFor(100);
+
+  const state = {
+    connector: null,
+  };
+
+  const onConnect = mock.fn(() => {
+    state.connector.end(Buffer.from('ccbb'));
+    setTimeout(() => {
+      assert(socket.eventNames().includes('error'));
+      assert(!socket.eventNames().includes('data'));
+    });
+    try {
+      state.connector.write(Buffer.from('dd'));
+      throw new Error('xxxx');
+    } catch (error) {
+      assert(error instanceof assert.AssertionError);
+    }
+  });
+  const onData = mock.fn(() => {});
   const onClose = mock.fn(() => {});
   const onError = mock.fn(() => {});
 
@@ -1319,9 +1382,10 @@ test('createConnector open resume', async () => {
   );
 
   await waitFor(300);
+
   assert.equal(onConnect.mock.calls.length, 1);
   assert.equal(onError.mock.calls.length, 0);
-  assert.equal(onClose.mock.calls.length, 1);
-  assert.equal(onData.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(handleDataOnSocket.mock.calls.length, 1);
   server.close();
 });

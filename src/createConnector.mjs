@@ -41,7 +41,6 @@ const createConnector = (
     isEndEventBind: false,
     isEventsClear: false,
     isSignalEventBind: false,
-    socket,
     outgoingBufList: [],
   };
 
@@ -250,7 +249,7 @@ const createConnector = (
   connector.resume = resume;
 
   connector.write = (chunk) => {
-    assert(state.isActive);
+    assert(state.isActive && !state.isEndEventBind);
     if (!state.isAttachEvents) {
       state.outgoingBufList.push(chunk);
       return false;
@@ -288,7 +287,9 @@ const createConnector = (
     socket.once('connect', handleConnect);
   } else {
     socket.once('close', handleClose);
-    handleConnect();
+    process.nextTick(() => {
+      handleConnect();
+    });
   }
 
   if (signal) {
