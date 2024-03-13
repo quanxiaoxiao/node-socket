@@ -705,3 +705,93 @@ test('createConnector stream incoming 2', () => {
     () => socket,
   );
 });
+
+test('createConnector stream incoming 3', () => {
+  const port = getPort();
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_555`);
+  const ws = fs.createWriteStream(pathname);
+  const content = 'aaaaaaaabbbbbbbcccccc';
+  let i = 0;
+  const server = net.createServer((socket) => {
+    let isPause = false;
+    let isClose = false;
+    function walk() {
+      while (!isPause && !isClose) {
+        const s = `${_.times(800).map(() => content).join('')}:${i}`;
+        const ret = socket.write(Buffer.from(s));
+        if (ret === false) {
+          isPause = true;
+        }
+        i++;
+      }
+    }
+
+    socket.once('error', () => {});
+
+    socket.on('drain', () => {
+      isPause = false;
+      walk();
+    });
+
+    socket.on('close', () => {
+      isClose = true;
+      server.close();
+    });
+
+    setTimeout(() => {
+      walk();
+    }, 50);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const state = {
+    connector: null,
+  };
+
+  const onDrain = mock.fn(() => {
+    state.connector.resume();
+    setTimeout(() => {
+      state.connector();
+      setTimeout(() => {
+        if (!ws.writableEnded) {
+          ws.end();
+        }
+      }, 200);
+    }, 2000);
+  });
+
+  const onError = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+
+  ws.on('drain', onDrain);
+
+  ws.on('finish', () => {
+    setTimeout(() => {
+      fs.unlinkSync(pathname);
+      assert.equal(onError.mock.calls.length, 0);
+      assert.equal(onClose.mock.calls.length, 0);
+      assert(!socket.eventNames().includes('error'));
+      assert(!socket.eventNames().includes('data'));
+      assert(!socket.eventNames().includes('drain'));
+      assert(!socket.eventNames().includes('close'));
+    }, 200);
+  });
+
+  state.connector = createConnector(
+    {
+      onData: (chunk) => {
+        assert(!ws.writableEnded);
+        return ws.write(chunk);
+      },
+      onError,
+      onClose,
+    },
+    () => socket,
+  );
+});

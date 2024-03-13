@@ -86,8 +86,11 @@ const createConnector = (
   }
 
   function handleDrain() {
-    if (state.isActive && onDrain) {
+    assert(state.isActive);
+    if (onDrain) {
       onDrain();
+    } else {
+      resume();
     }
   }
 
@@ -197,26 +200,20 @@ const createConnector = (
   }
 
   function handleData(chunk) {
-    if (state.isActive) {
-      try {
-        if (onData(chunk) === false) {
-          pause();
-        }
-      } catch (error) {
-        clearEventsListener();
-        if (doClose()) {
-          emitError(error);
-        }
-        if (!socket.destroyed) {
-          socket.destroy();
-        }
-        unbindSocketError();
+    assert(state.isActive);
+    try {
+      if (onData(chunk) === false) {
+        pause();
       }
-    } else {
-      socket.off('data', handleData);
+    } catch (error) {
+      clearEventsListener();
+      if (doClose()) {
+        emitError(error);
+      }
       if (!socket.destroyed) {
         socket.destroy();
       }
+      unbindSocketError();
     }
   }
 
