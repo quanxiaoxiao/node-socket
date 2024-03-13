@@ -876,7 +876,7 @@ test('createConnector signal', async () => {
 
   const controller = new AbortController();
 
-  createConnector(
+  const connector = createConnector(
     {
       onData,
       onClose,
@@ -887,11 +887,19 @@ test('createConnector signal', async () => {
   );
 
   assert(socket.eventNames().includes('connect'));
+  connector.write(Buffer.from('aaabbbccc'));
   assert(!socket.destroyed);
   controller.abort();
   assert(socket.destroyed);
   assert(socket.eventNames().includes('error'));
   assert(!socket.eventNames().includes('connect'));
+
+  assert.throws(
+    () => {
+      connector.write(Buffer.from('quan'));
+    },
+    (error) => error instanceof assert.AssertionError,
+  );
 
   await waitFor(300);
   assert(!socket.eventNames().includes('error'));
