@@ -45,11 +45,10 @@ const createConnector = (
   };
 
   function emitError(error) {
-    const err = typeof error === 'string' ? new Error(error) : error;
     if (onError) {
-      onError(err);
+      onError(error);
     } else {
-      console.error(err);
+      console.error(error);
     }
   }
 
@@ -92,8 +91,6 @@ const createConnector = (
     assert(state.isActive);
     if (onDrain) {
       onDrain();
-    } else {
-      resume();
     }
   }
 
