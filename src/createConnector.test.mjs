@@ -74,6 +74,7 @@ test('createConnector unable connet remote', async () => {
     () => socket,
   );
   assert(socket.eventNames().includes('connect'));
+  assert(!socket.eventNames().includes('close'));
   assert(socket.eventNames().includes('error'));
   assert.equal(typeof connector, 'function');
   await waitFor(200);
@@ -134,6 +135,8 @@ test('createConnector', async () => {
   );
 
   assert.equal(typeof connector, 'function');
+  assert(!socket.eventNames().includes('close'));
+  assert(socket.eventNames().includes('error'));
 
   connector.write(Buffer.from('445566'));
 
@@ -200,6 +203,7 @@ test('createConnector, socket already connect', async () => {
   );
 
   assert(!socket.eventNames().includes('connect'));
+  assert(socket.eventNames().includes('close'));
 
   connector.write(Buffer.from('777'));
 

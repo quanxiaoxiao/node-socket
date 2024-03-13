@@ -124,12 +124,13 @@ const createConnector = (
         state.isConnectActive = true;
         socket.on('data', handleData);
         if (timeout != null) {
+          assert(typeof timeout === 'number' && timeout >= 0);
           socket.setTimeout(timeout);
           socket.once('timeout', handleTimeout);
         }
         socket.on('drain', handleDrain);
         process.nextTick(() => {
-          if (socket.isPaused()) {
+          if (state.isActive && socket.isPaused()) {
             socket.resume();
           }
         });
