@@ -85,6 +85,29 @@ test('createConnector unable connet remote', async () => {
   assert(!socket.eventNames().includes('error'));
 });
 
+test('createConnector unable connet remote 2', async () => {
+  const port = getPort();
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+  const onConnect = mock.fn(() => {});
+  const onData = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  createConnector(
+    {
+      onConnect,
+      onData,
+      onClose,
+    },
+    () => socket,
+  );
+  await waitFor(200);
+  assert.equal(onConnect.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
+});
+
 test('createConnector', async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn((chunk) => {
@@ -964,5 +987,49 @@ test('createConnector timeout', async () => {
   assert.equal(onConnect.mock.calls.length, 1);
   assert.equal(onError.mock.calls.length, 0);
 
+  server.close();
+});
+
+test('createConnector timeout 2', async () => {
+  const port = getPort();
+  const server = net.createServer((socket) => {
+    socket.write('aabb');
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onClose = mock.fn(() => {});
+
+  const onError = mock.fn((error) => {
+    assert.equal(error.message, 'bbbb');
+    assert(!socket.eventNames().includes('timeout'));
+  });
+
+  const onData = mock.fn(() => {
+    assert(socket.eventNames().includes('timeout'));
+    throw new Error('bbbb');
+  });
+
+  createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+      timeout: 1000 * 2,
+    },
+    () => socket,
+  );
+
+  await waitFor(200);
+  assert.equal(onData.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert(socket.destroyed);
   server.close();
 });
