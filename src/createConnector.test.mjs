@@ -111,6 +111,9 @@ test('createConnector', async () => {
     assert.equal(handleDataOnSocket.mock.calls.length, 0);
     assert(socket.eventNames().includes('error'));
     assert(socket.eventNames().includes('close'));
+    setTimeout(() => {
+      assert(!socket.eventNames().includes('timeout'));
+    });
   });
   const onData = mock.fn((chunk) => {
     assert.equal(chunk.toString(), 'aabbcc');
@@ -912,6 +915,53 @@ test('createConnector signal', async () => {
 
   assert.equal(onConnect.mock.calls.length, 0);
   assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onError.mock.calls.length, 0);
+
+  server.close();
+});
+
+test('createConnector timeout', async () => {
+  const port = getPort();
+  const server = net.createServer(() => {
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onClose = mock.fn(() => {
+    assert(!socket.eventNames().includes('timeout'));
+    assert(!socket.eventNames().includes('data'));
+    assert(!socket.eventNames().includes('close'));
+    assert(!socket.eventNames().includes('drain'));
+  });
+
+  const onError = mock.fn(() => {});
+
+  const onConnect = mock.fn(() => {
+    setTimeout(() => {
+      assert(socket.eventNames().includes('timeout'));
+    });
+  });
+
+  createConnector(
+    {
+      onData: () => {},
+      onClose,
+      onConnect,
+      onError,
+      timeout: 1000 * 2,
+    },
+    () => socket,
+  );
+
+  await waitFor(1000 * 3);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onConnect.mock.calls.length, 1);
   assert.equal(onError.mock.calls.length, 0);
 
   server.close();
