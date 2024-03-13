@@ -1033,3 +1033,46 @@ test('createConnector timeout 2', async () => {
   assert(socket.destroyed);
   server.close();
 });
+
+test('createConnector socket emit error', { only: true }, async () => {
+  const port = getPort();
+  const onConnect = mock.fn(() => {});
+  const server = net.createServer(onConnect);
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onClose = mock.fn(() => {});
+
+  const onError = mock.fn((error) => {
+    assert.equal(error.message, 'aaaa');
+    assert(!socket.eventNames().includes('connet'));
+  });
+
+  const onData = mock.fn(() => {
+  });
+
+  createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  process.nextTick(() => {
+    socket.emit('error', new Error('aaaa'));
+  });
+
+  await waitFor(200);
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onConnect.mock.calls.length, 0);
+  server.close();
+});

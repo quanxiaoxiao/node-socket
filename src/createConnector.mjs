@@ -72,6 +72,10 @@ const createConnector = (
   }
 
   function handleError(error) {
+    if (state.isConnectEventBind) {
+      state.isConnectEventBind = false;
+      socket.off('connect', handleConnect);
+    }
     state.isErrorEventBind = false;
     if (state.isEndEventBind) {
       if (!state.isEndEmit) {
@@ -82,6 +86,9 @@ const createConnector = (
     }
     if (doClose()) {
       emitError(error);
+    }
+    if (!socket.destroyed) {
+      socket.destroy();
     }
   }
 
