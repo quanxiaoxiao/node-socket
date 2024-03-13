@@ -856,3 +856,49 @@ test('createConnector onData trigger error', async () => {
   assert(!socket.eventNames().includes('data'));
   assert(!socket.eventNames().includes('drain'));
 });
+
+test('createConnector signal', async () => {
+  const port = getPort();
+  const onConnect = mock.fn(() => {});
+  const server = net.createServer(onConnect);
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onData = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+
+  const controller = new AbortController();
+
+  createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+    controller.signal,
+  );
+
+  assert(socket.eventNames().includes('connect'));
+  assert(!socket.destroyed);
+  controller.abort();
+  assert(socket.destroyed);
+  assert(socket.eventNames().includes('error'));
+  assert(!socket.eventNames().includes('connect'));
+
+  await waitFor(300);
+  assert(!socket.eventNames().includes('error'));
+
+  assert.equal(onConnect.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onError.mock.calls.length, 0);
+
+  server.close();
+});
