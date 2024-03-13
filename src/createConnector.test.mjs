@@ -53,7 +53,7 @@ test('createConnector fail', () => {
   );
 });
 
-test('createConnector unable connet remote', async () => {
+test('createConnector unable connect remote', async () => {
   const port = getPort();
   const socket = net.Socket();
   socket.connect({
@@ -85,7 +85,7 @@ test('createConnector unable connet remote', async () => {
   assert(!socket.eventNames().includes('error'));
 });
 
-test('createConnector unable connet remote 2', async () => {
+test('createConnector unable connect remote 2', async () => {
   const port = getPort();
   const socket = net.Socket();
   socket.connect({
@@ -1051,7 +1051,7 @@ test('createConnector socket emit error', async () => {
 
   const onError = mock.fn((error) => {
     assert.equal(error.message, 'aaaa');
-    assert(!socket.eventNames().includes('connet'));
+    assert(!socket.eventNames().includes('connect'));
   });
 
   const onData = mock.fn(() => {
@@ -1103,7 +1103,7 @@ test('createConnector socket emit error 2', async () => {
 
   const onError = mock.fn((error) => {
     assert.equal(error.message, 'cccc');
-    assert(!socket.eventNames().includes('connet'));
+    assert(!socket.eventNames().includes('connect'));
   });
 
   const onData = mock.fn(() => {});
@@ -1131,5 +1131,51 @@ test('createConnector socket emit error 2', async () => {
   assert.equal(onData.mock.calls.length, 0);
   assert.equal(onConnect.mock.calls.length, 1);
   assert.equal(onClose.mock.calls.length, 0);
+  server.close();
+});
+
+test('createConnector end before connect', async () => {
+  const port = getPort();
+  const server = net.createServer((socket) => {
+    socket.on('error', () => {});
+    if (!socket.writable) {
+      socket.write(Buffer.from('aaa'));
+    }
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onData = mock.fn(() => {});
+  const onConnect = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn((error) => {
+    assert.equal(error.message, 'socket is not connect');
+  });
+
+  const connector = createConnector(
+    {
+      onData,
+      onConnect,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  assert(socket.eventNames().includes('connect'));
+
+  connector.end();
+  assert(!socket.eventNames().includes('connect'));
+
+  await waitFor(200);
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onConnect.mock.calls.length, 0);
   server.close();
 });

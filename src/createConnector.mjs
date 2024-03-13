@@ -275,8 +275,6 @@ const createConnector = (
         } else {
           socket.end();
         }
-      } else if (!socket.destroyed) {
-        socket.destroy();
       }
     }
   };
