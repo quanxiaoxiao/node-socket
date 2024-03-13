@@ -271,8 +271,14 @@ const createConnector = (
       if (socket.writable) {
         state.isEndEventBind = true;
         socket.once('end', handleSocketEnd);
+        const bufList = [...state.outgoingBufList];
+        state.outgoingBufList = [];
         if (chunk && chunk.length > 0) {
-          socket.end(chunk);
+          bufList.push(chunk);
+        }
+        const buf = Buffer.concat(bufList);
+        if (buf.length > 0) {
+          socket.end(buf);
         } else {
           socket.end();
         }

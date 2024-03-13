@@ -1273,6 +1273,55 @@ test('createConnector end 2', async () => {
   server.close();
 });
 
+test('createConnector end 3', async () => {
+  const port = getPort();
+  const handleDataOnSocket = mock.fn((chunk) => {
+    assert.equal(chunk.toString(), '44557788');
+  });
+  const server = net.createServer((socket) => {
+    socket.on('data', handleDataOnSocket);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const state = {
+    connector: null,
+  };
+
+  const onConnect = mock.fn(() => {
+    state.connector.end();
+  });
+  const onData = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+
+  state.connector = createConnector(
+    {
+      onData,
+      onConnect,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  state.connector.write(Buffer.from('4455'));
+  state.connector.write(Buffer.from('7788'));
+
+  await waitFor(300);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(handleDataOnSocket.mock.calls.length, 1);
+  server.close();
+});
+
 test('createConnector open resume', async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn(() => {
