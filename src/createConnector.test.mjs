@@ -1438,3 +1438,88 @@ test('createConnector end after write', async () => {
   assert.equal(handleDataOnSocket.mock.calls.length, 1);
   server.close();
 });
+
+test('createConnector onClose', async () => {
+  const port = getPort();
+  const server = net.createServer((socket) => {
+    setTimeout(() => {
+      socket.write('aa');
+    }, 10);
+    setTimeout(() => {
+      socket.write('bb');
+    }, 30);
+    setTimeout(() => {
+      socket.write('cc');
+      socket.end();
+    }, 60);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+  const onError = mock.fn(() => {});
+  const onClose = mock.fn((buf) => {
+    assert.equal(buf.toString(), '');
+  });
+  const onData = mock.fn(() => {});
+  createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+  await waitFor(500);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(onData.mock.calls.length, 3);
+  assert.equal(
+    Buffer.concat(onData.mock.calls.map((d) => d.arguments[0])),
+    'aabbcc',
+  );
+  server.close();
+});
+
+test('createConnector onClose 2', async () => {
+  const port = getPort();
+  const server = net.createServer((socket) => {
+    setTimeout(() => {
+      socket.write('aa');
+    }, 10);
+    setTimeout(() => {
+      socket.write('bb');
+    }, 30);
+    setTimeout(() => {
+      socket.write('cc');
+      socket.end();
+    }, 60);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+  const onError = mock.fn(() => {});
+  const onClose = mock.fn((buf) => {
+    assert.equal(buf.toString(), 'aabbcc');
+  });
+  createConnector(
+    {
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+  await waitFor(500);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 1);
+  server.close();
+});

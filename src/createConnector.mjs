@@ -29,8 +29,6 @@ const createConnector = (
     onError,
   } = options;
 
-  assert(typeof onData === 'function');
-
   const state = {
     isConnect: false,
     isAttachEvents: false,
@@ -42,11 +40,12 @@ const createConnector = (
     isEventsClear: false,
     isSignalEventBind: false,
     outgoingBufList: [],
+    incomingBufList: [],
   };
 
   function emitError(error) {
     if (onError) {
-      onError(error);
+      onError(error, state.isConnect);
     } else {
       console.error(error);
     }
@@ -56,13 +55,13 @@ const createConnector = (
     if (!state.isEventsClear) {
       state.isEventsClear = true;
       if (state.isConnectEventBind) {
-        socket.off('connect', handleConnect);
+        socket.off('connect', handleConnectOnSocket);
       } else {
-        socket.off('close', handleClose);
+        socket.off('close', handleCloseOnSocket);
       }
       if (state.isAttachEvents) {
-        socket.off('data', handleData);
-        socket.off('drain', handleDrain);
+        socket.off('data', handleDataOnSocket);
+        socket.off('drain', handleDrainOnSocket);
         if (timeout != null) {
           socket.off('timeout', handleTimeout);
         }
@@ -70,7 +69,7 @@ const createConnector = (
     }
   }
 
-  function handleError(error) {
+  function handleErrorOnSocket(error) {
     state.isErrorEventBind = false;
     if (state.isEndEventBind) {
       if (!state.isEndEmit) {
@@ -87,19 +86,19 @@ const createConnector = (
     }
   }
 
-  function handleDrain() {
+  function handleDrainOnSocket() {
     assert(state.isActive);
     if (onDrain) {
       onDrain();
     }
   }
 
-  async function handleConnect() {
+  async function handleConnectOnSocket() {
     assert(state.isActive);
     state.isConnect = true;
     if (state.isConnectEventBind) {
       state.isConnectEventBind = false;
-      socket.once('close', handleClose);
+      socket.once('close', handleCloseOnSocket);
     }
     if (onConnect) {
       try {
@@ -117,13 +116,13 @@ const createConnector = (
     }
     if (state.isActive) {
       state.isAttachEvents = true;
-      socket.on('data', handleData);
+      socket.on('data', handleDataOnSocket);
       if (timeout != null) {
         assert(typeof timeout === 'number' && timeout >= 0);
         socket.setTimeout(timeout);
         socket.once('timeout', handleTimeout);
       }
-      socket.on('drain', handleDrain);
+      socket.on('drain', handleDrainOnSocket);
       process.nextTick(() => {
         if (state.isActive && socket.isPaused()) {
           socket.resume();
@@ -138,27 +137,29 @@ const createConnector = (
     }
   }
 
-  function handleClose() {
+  function handleCloseOnSocket() {
     if (!state.isEventsClear) {
       state.isEventsClear = true;
       if (state.isAttachEvents) {
-        socket.off('data', handleData);
-        socket.off('drain', handleDrain);
+        socket.off('data', handleDataOnSocket);
+        socket.off('drain', handleDrainOnSocket);
         if (timeout != null) {
           socket.off('timeout', handleTimeout);
         }
       }
     }
-    if (doClose() && onClose) {
-      onClose();
-    }
     unbindSocketError();
+    if (doClose() && onClose) {
+      const buf = Buffer.concat(state.incomingBufList);
+      state.incomingBufList = [];
+      onClose(buf);
+    }
   }
 
   function handleTimeout() {
     state.isEventsClear = true;
-    socket.off('data', handleData);
-    socket.off('drain', handleDrain);
+    socket.off('data', handleDataOnSocket);
+    socket.off('drain', handleDrainOnSocket);
     if (!socket.destroyed) {
       socket.destroy();
     }
@@ -192,21 +193,25 @@ const createConnector = (
     return false;
   }
 
-  function handleData(chunk) {
+  function handleDataOnSocket(chunk) {
     assert(state.isActive);
-    try {
-      if (onData(chunk) === false) {
-        pause();
+    if (onData) {
+      try {
+        if (onData(chunk) === false) {
+          pause();
+        }
+      } catch (error) {
+        clearEventsListener();
+        if (doClose()) {
+          emitError(error);
+        }
+        if (!socket.destroyed) {
+          socket.destroy();
+        }
+        unbindSocketError();
       }
-    } catch (error) {
-      clearEventsListener();
-      if (doClose()) {
-        emitError(error);
-      }
-      if (!socket.destroyed) {
-        socket.destroy();
-      }
-      unbindSocketError();
+    } else {
+      state.incomingBufList.push(chunk);
     }
   }
 
@@ -215,7 +220,7 @@ const createConnector = (
       setTimeout(() => {
         if (state.isErrorEventBind) {
           state.isErrorEventBind = false;
-          socket.off('error', handleError);
+          socket.off('error', handleErrorOnSocket);
         }
       }, 100);
     }
@@ -283,15 +288,15 @@ const createConnector = (
     }
   };
 
-  socket.once('error', handleError);
+  socket.once('error', handleErrorOnSocket);
 
   if (socket.connecting) {
     state.isConnectEventBind = true;
-    socket.once('connect', handleConnect);
+    socket.once('connect', handleConnectOnSocket);
   } else {
-    socket.once('close', handleClose);
+    socket.once('close', handleCloseOnSocket);
     process.nextTick(() => {
-      handleConnect();
+      handleConnectOnSocket();
     });
   }
 
