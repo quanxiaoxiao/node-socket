@@ -98,8 +98,8 @@ const createConnector = (
   }
 
   async function handleConnect() {
-    state.isConnect = true;
     assert(state.isActive);
+    state.isConnect = true;
     if (state.isConnectEventBind) {
       state.isConnectEventBind = false;
       socket.once('close', handleClose);
