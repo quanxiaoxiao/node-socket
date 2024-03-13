@@ -32,6 +32,7 @@ const createConnector = (
   assert(typeof onData === 'function');
 
   const state = {
+    isConnect: false,
     isConnectActive: false,
     isActive: true,
     isConnectEventBind: false,
@@ -98,6 +99,7 @@ const createConnector = (
   }
 
   async function handleConnect() {
+    state.isConnect = true;
     assert(state.isActive);
     if (state.isConnectEventBind) {
       state.isConnectEventBind = false;
@@ -260,8 +262,8 @@ const createConnector = (
   };
 
   connector.end = (chunk) => {
-    assert(state.isActive && !state.isEndEventBind);
-    if (!state.isConnectActive) {
+    assert(state.isActive && !state.isEndEventBind && !socket.writableEnded);
+    if (!state.isConnect) {
       connector();
       emitError(new Error('socket is not connect'));
     } else {
