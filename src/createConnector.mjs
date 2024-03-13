@@ -72,10 +72,6 @@ const createConnector = (
   }
 
   function handleError(error) {
-    if (state.isConnectEventBind) {
-      state.isConnectEventBind = false;
-      socket.off('connect', handleConnect);
-    }
     state.isErrorEventBind = false;
     if (state.isEndEventBind) {
       if (!state.isEndEmit) {
@@ -102,53 +98,44 @@ const createConnector = (
   }
 
   async function handleConnect() {
+    assert(state.isActive);
     if (state.isConnectEventBind) {
       state.isConnectEventBind = false;
-      if (state.isActive) {
-        socket.once('close', handleClose);
+      socket.once('close', handleClose);
+    }
+    if (onConnect) {
+      try {
+        await onConnect();
+      } catch (error) {
+        clearEventsListener();
+        if (!socket.destroyed) {
+          socket.destroy();
+        }
+        unbindSocketError();
+        if (doClose()) {
+          emitError(error);
+        }
       }
     }
-    if (!state.isActive) {
-      if (!socket.destroyed) {
-        socket.destroy();
+    if (state.isActive) {
+      state.isConnectActive = true;
+      socket.on('data', handleData);
+      if (timeout != null) {
+        assert(typeof timeout === 'number' && timeout >= 0);
+        socket.setTimeout(timeout);
+        socket.once('timeout', handleTimeout);
       }
-    } else {
-      if (onConnect) {
-        try {
-          await onConnect();
-        } catch (error) {
-          clearEventsListener();
-          if (!socket.destroyed) {
-            socket.destroy();
-          }
-          unbindSocketError();
-          if (doClose()) {
-            emitError(error);
-          }
+      socket.on('drain', handleDrain);
+      process.nextTick(() => {
+        if (state.isActive && socket.isPaused()) {
+          socket.resume();
         }
-      }
-      if (state.isActive) {
-        state.isConnectActive = true;
-        socket.on('data', handleData);
-        if (timeout != null) {
-          assert(typeof timeout === 'number' && timeout >= 0);
-          socket.setTimeout(timeout);
-          socket.once('timeout', handleTimeout);
-        }
-        socket.on('drain', handleDrain);
-        process.nextTick(() => {
-          if (state.isActive && socket.isPaused()) {
-            socket.resume();
-          }
-        });
-      }
-      while (state.isActive
-          && state.outgoingBufList.length > 0
-      ) {
-        const chunk = state.outgoingBufList.shift();
-        if (chunk.length > 0) {
-          socket.write(chunk);
-        }
+      });
+    }
+    while (state.isActive && state.outgoingBufList.length > 0) {
+      const chunk = state.outgoingBufList.shift();
+      if (chunk.length > 0) {
+        socket.write(chunk);
       }
     }
   }
