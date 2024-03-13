@@ -1272,3 +1272,56 @@ test('createConnector end 2', async () => {
   assert.equal(onClose.mock.calls.length, 0);
   server.close();
 });
+
+test('createConnector open resume', async () => {
+  const port = getPort();
+  const handleDataOnSocket = mock.fn(() => {
+  });
+  const server = net.createServer((socket) => {
+    socket.on('data', handleDataOnSocket);
+
+    setTimeout(() => {
+      socket.end('aabbcc');
+    });
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  await waitFor(100);
+
+  const state = {
+    connector: null,
+  };
+
+  const onConnect = mock.fn(() => {
+    socket.pause();
+  });
+  const onData = mock.fn((chunk) => {
+    assert.equal(chunk.toString(), 'aabbcc');
+  });
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+
+  state.connector = createConnector(
+    {
+      onData,
+      onConnect,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  await waitFor(300);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(onData.mock.calls.length, 1);
+  server.close();
+});
