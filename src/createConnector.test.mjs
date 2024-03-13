@@ -795,3 +795,60 @@ test('createConnector stream incoming 3', () => {
     () => socket,
   );
 });
+
+test('createConnector onData trigger error', async () => {
+  const port = getPort();
+  const server = net.createServer((socket) => {
+    setTimeout(() => {
+      socket.write('111');
+    }, 10);
+    setTimeout(() => {
+      socket.write('222');
+    }, 20);
+    setTimeout(() => {
+      socket.write('333');
+    }, 30);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  let i = 0;
+
+  const onData = mock.fn((chunk) => {
+    if (i === 1) {
+      assert.equal(chunk.toString(), '222');
+      throw new Error('bbbb');
+    } else if (i === 0) {
+      assert.equal(chunk.toString(), '111');
+    }
+    i++;
+  });
+
+  const onError = mock.fn((error) => {
+    assert.equal(error.message, 'bbbb');
+  });
+
+  const onClose = mock.fn(() => {});
+
+  createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+
+  await waitFor(300);
+
+  server.close();
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onData.mock.calls.length, 2);
+});
