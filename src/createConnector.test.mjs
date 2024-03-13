@@ -851,4 +851,8 @@ test('createConnector onData trigger error', async () => {
   assert.equal(onError.mock.calls.length, 1);
   assert.equal(onClose.mock.calls.length, 0);
   assert.equal(onData.mock.calls.length, 2);
+  assert(!socket.eventNames().includes('close'));
+  assert(!socket.eventNames().includes('error'));
+  assert(!socket.eventNames().includes('data'));
+  assert(!socket.eventNames().includes('drain'));
 });
