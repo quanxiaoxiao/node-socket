@@ -1177,9 +1177,11 @@ test('createConnector end before connect', async () => {
 
 test('createConnector end', { only: true }, async () => {
   const port = getPort();
+  const handleDataOnSocket = mock.fn((chunk) => {
+    assert.equal(chunk.toString(), 'aabb');
+  });
   const server = net.createServer((socket) => {
-    socket.on('data', () => {
-    });
+    socket.on('data', handleDataOnSocket);
   });
   server.listen(port);
 
@@ -1217,5 +1219,6 @@ test('createConnector end', { only: true }, async () => {
   assert.equal(onConnect.mock.calls.length, 1);
   assert.equal(onError.mock.calls.length, 0);
   assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(handleDataOnSocket.mock.calls.length, 1);
   server.close();
 });

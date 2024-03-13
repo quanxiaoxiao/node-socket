@@ -33,7 +33,7 @@ const createConnector = (
 
   const state = {
     isConnect: false,
-    isConnectActive: false,
+    isAttachEvents: false,
     isActive: true,
     isConnectEventBind: false,
     isEndEmit: false,
@@ -62,7 +62,7 @@ const createConnector = (
       } else {
         socket.off('close', handleClose);
       }
-      if (state.isConnectActive) {
+      if (state.isAttachEvents) {
         socket.off('data', handleData);
         socket.off('drain', handleDrain);
         if (timeout != null) {
@@ -120,7 +120,7 @@ const createConnector = (
       }
     }
     if (state.isActive) {
-      state.isConnectActive = true;
+      state.isAttachEvents = true;
       socket.on('data', handleData);
       if (timeout != null) {
         assert(typeof timeout === 'number' && timeout >= 0);
@@ -145,7 +145,7 @@ const createConnector = (
   function handleClose() {
     if (!state.isEventsClear) {
       state.isEventsClear = true;
-      if (state.isConnectActive) {
+      if (state.isAttachEvents) {
         socket.off('data', handleData);
         socket.off('drain', handleDrain);
         if (timeout != null) {
@@ -170,7 +170,7 @@ const createConnector = (
 
   function pause() {
     if (state.isActive
-      && state.isConnectActive
+      && state.isAttachEvents
       && !socket.isPaused()) {
       socket.pause();
     }
@@ -178,7 +178,7 @@ const createConnector = (
 
   function resume() {
     if (state.isActive
-      && state.isConnectActive
+      && state.isAttachEvents
       && socket.isPaused()) {
       socket.resume();
     }
@@ -251,7 +251,7 @@ const createConnector = (
 
   connector.write = (chunk) => {
     assert(state.isActive);
-    if (!state.isConnectActive) {
+    if (!state.isAttachEvents) {
       state.outgoingBufList.push(chunk);
       return false;
     }
