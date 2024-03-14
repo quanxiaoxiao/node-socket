@@ -94,13 +94,13 @@ const createConnector = (
   }
 
   async function handleConnectOnSocket() {
-    assert(state.isActive);
-    state.isConnect = true;
     if (state.isConnectEventBind) {
+      assert(state.isActive);
       state.isConnectEventBind = false;
       socket.once('close', handleCloseOnSocket);
     }
-    if (onConnect) {
+    state.isConnect = true;
+    if (onConnect && state.isActive) {
       try {
         await onConnect();
       } catch (error) {
