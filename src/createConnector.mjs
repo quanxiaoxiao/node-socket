@@ -63,7 +63,7 @@ const createConnector = (
         socket.off('data', handleDataOnSocket);
         socket.off('drain', handleDrainOnSocket);
         if (timeout != null) {
-          socket.off('timeout', handleTimeout);
+          socket.off('timeout', handleTimeoutOnSocket);
         }
       }
     }
@@ -120,7 +120,7 @@ const createConnector = (
       if (timeout != null) {
         assert(typeof timeout === 'number' && timeout >= 0);
         socket.setTimeout(timeout);
-        socket.once('timeout', handleTimeout);
+        socket.once('timeout', handleTimeoutOnSocket);
       }
       socket.on('drain', handleDrainOnSocket);
       process.nextTick(() => {
@@ -144,7 +144,7 @@ const createConnector = (
         socket.off('data', handleDataOnSocket);
         socket.off('drain', handleDrainOnSocket);
         if (timeout != null) {
-          socket.off('timeout', handleTimeout);
+          socket.off('timeout', handleTimeoutOnSocket);
         }
       }
     }
@@ -156,7 +156,7 @@ const createConnector = (
     }
   }
 
-  function handleTimeout() {
+  function handleTimeoutOnSocket() {
     state.isEventsClear = true;
     socket.off('data', handleDataOnSocket);
     socket.off('drain', handleDrainOnSocket);
