@@ -1609,3 +1609,87 @@ test('createConnector, stream with outgoing abort', () => {
     }, 100);
   });
 });
+
+test('createConnector stream with incoming abort', () => {
+  const port = getPort();
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_4444_aaa`);
+  const ws = fs.createWriteStream(pathname);
+  const content = 'aaaaaaaabbbbbbbcccccc';
+  let i = 0;
+  const controller = new AbortController();
+  const server = net.createServer((socket) => {
+    let isPause = false;
+    socket.on('error', () => {});
+    function walk() {
+      while (!isPause && !socket.destroyed) {
+        const s = `${_.times(800).map(() => content).join('')}:${i}`;
+        const ret = socket.write(Buffer.from(s));
+        if (ret === false) {
+          isPause = true;
+        }
+        i++;
+      }
+    }
+
+    socket.on('drain', () => {
+      isPause = false;
+      walk();
+    });
+
+    setTimeout(() => {
+      walk();
+    }, 50);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const state = {
+    connector: null,
+  };
+
+  const onError = mock.fn(() => {});
+
+  const onClose = mock.fn(() => {});
+
+  ws.on('drain', () => {
+    state.connector.resume();
+    setTimeout(() => {
+      if (!controller.signal.aborted) {
+        assert(socket.eventNames().includes('close'));
+        assert(socket.eventNames().includes('data'));
+        assert(socket.eventNames().includes('drain'));
+        assert(!socket.destroyed);
+        controller.abort();
+        assert(!socket.eventNames().includes('close'));
+        assert(!socket.eventNames().includes('data'));
+        assert(!socket.eventNames().includes('drain'));
+        assert(socket.destroyed);
+        ws.end();
+      }
+    }, 1000);
+  });
+
+  ws.on('finish', () => {
+    setTimeout(() => {
+      server.close();
+      fs.unlinkSync(pathname);
+      assert.equal(onError.mock.calls.length, 0);
+      assert.equal(onClose.mock.calls.length, 0);
+    }, 100);
+  });
+
+  state.connector = createConnector(
+    {
+      onData: (chunk) => ws.write(chunk),
+      onError,
+      onClose,
+    },
+    () => socket,
+    controller.signal,
+  );
+});
