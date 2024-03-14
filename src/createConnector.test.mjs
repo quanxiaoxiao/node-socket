@@ -1526,3 +1526,86 @@ test('createConnector onClose 2', async () => {
   assert.equal(onClose.mock.calls.length, 1);
   server.close();
 });
+
+test('createConnector, stream with outgoing abort', () => {
+  const port = getPort();
+  const controller = new AbortController();
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_888`);
+  const ws = fs.createWriteStream(pathname);
+  const server = net.createServer((socket) => {
+    socket.pipe(ws);
+    socket.on('close', () => {
+      ws.end();
+    });
+  });
+  server.listen(port);
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+  const onData = mock.fn(() => {});
+  let i = 0;
+  let isPause = false;
+
+  const onDrain = mock.fn(() => {
+    isPause = false;
+    setTimeout(() => {
+      if (!controller.signal.aborted) {
+        assert(socket.eventNames().includes('data'));
+        assert(socket.eventNames().includes('drain'));
+        assert(socket.eventNames().includes('close'));
+        assert(!socket.destroyed);
+        controller.abort();
+        assert(!socket.eventNames().includes('data'));
+        assert(!socket.eventNames().includes('drain'));
+        assert(!socket.eventNames().includes('close'));
+        assert(socket.destroyed);
+      }
+    }, 1000);
+    walk();
+  });
+
+  const connector = createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+      onDrain,
+    },
+    () => socket,
+    controller.signal,
+  );
+  const content = 'aabbccddee';
+  function walk() {
+    while (!isPause) {
+      const s = `${_.times(800).map(() => content).join('')}:${i}`;
+      try {
+        const ret = connector.write(Buffer.from(s));
+        if (ret === false) {
+          isPause = true;
+        }
+        i++;
+      } catch (error) {
+        break;
+      }
+    }
+  }
+
+  setTimeout(() => {
+    walk();
+  }, 200);
+
+  ws.on('finish', () => {
+    setTimeout(() => {
+      server.close();
+      fs.unlinkSync(pathname);
+      assert.equal(onError.mock.calls.length, 0);
+      assert.equal(onClose.mock.calls.length, 0);
+      assert(socket.destroyed);
+    }, 100);
+  });
+});
