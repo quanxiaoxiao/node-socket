@@ -1788,3 +1788,57 @@ test('createConnector signal abort 1', () => {
     controller.abort();
   }, 2000);
 });
+
+test('createConnector signal abort 2', () => {
+  const port = getPort();
+
+  const server = net.createServer((socket) => {
+    socket.on('data', () => {});
+    let i = 0;
+    const tick = setInterval(() => {
+      socket.write(Buffer.from(`aaaadfasdfwefasdfasdf asdfawefasdfasw:${i}`));
+      i++;
+    });
+    socket.on('error', () => {});
+    socket.on('close', () => {
+      clearInterval(tick);
+    });
+  });
+  server.listen(port);
+  const controller = new AbortController();
+
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+  let aborted = false;
+  const onData = mock.fn(() => {
+    aborted = controller.signal.aborted;
+  });
+
+  createConnector(
+    {
+      onClose,
+      onData,
+      onError,
+    },
+    () => socket,
+    controller.signal,
+  );
+  setTimeout(() => {
+    controller.abort();
+  }, 2000);
+  setTimeout(() => {
+    assert(!aborted);
+    assert(socket.destroyed);
+    assert(!socket.eventNames().includes('data'));
+    assert.equal(onClose.mock.calls.length, 0);
+    assert.equal(onError.mock.calls.length, 0);
+    assert(onData.mock.calls.length > 0);
+    server.close();
+  }, 2500);
+});

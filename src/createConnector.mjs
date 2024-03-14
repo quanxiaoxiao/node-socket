@@ -197,23 +197,25 @@ const createConnector = (
 
   function handleDataOnSocket(chunk) {
     assert(state.isActive);
-    if (onData) {
-      try {
-        if (onData(chunk) === false) {
-          pause();
+    if (!state.isEndEventBind) {
+      if (onData) {
+        try {
+          if (onData(chunk) === false) {
+            pause();
+          }
+        } catch (error) {
+          clearEventsListener();
+          if (doClose()) {
+            emitError(error);
+          }
+          if (!socket.destroyed) {
+            socket.destroy();
+          }
+          unbindSocketError();
         }
-      } catch (error) {
-        clearEventsListener();
-        if (doClose()) {
-          emitError(error);
-        }
-        if (!socket.destroyed) {
-          socket.destroy();
-        }
-        unbindSocketError();
+      } else {
+        state.incomingBufList.push(chunk);
       }
-    } else {
-      state.incomingBufList.push(chunk);
     }
   }
 
