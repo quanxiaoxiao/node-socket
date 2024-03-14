@@ -9,7 +9,7 @@ import createConnector from '../src/createConnector.mjs';
 
 const port = 5255;
 
-const count = 64;
+const count = 120;
 let index = 0;
 let countComplete = 0;
 
