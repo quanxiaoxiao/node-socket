@@ -63,7 +63,9 @@ test('createConnector unable connect remote', async () => {
   const onConnect = mock.fn(() => {});
   const onData = mock.fn(() => {});
   const onClose = mock.fn(() => {});
-  const onError = mock.fn(() => {});
+  const onError = mock.fn((error, isConnect) => {
+    assert(!isConnect);
+  });
   const connector = createConnector(
     {
       onConnect,
@@ -278,7 +280,8 @@ test('createConnector, onConnect trigger error', async () => {
 
   const onClose = mock.fn(() => {});
 
-  const onError = mock.fn((error) => {
+  const onError = mock.fn((error, isConnect) => {
+    assert(isConnect);
     assert.equal(error.message, 'aaaa');
     assert(!socket.eventNames().includes('close'));
   });
