@@ -9,7 +9,7 @@ test('pipeForward fail', () => {
       const socketSource = net.Socket();
       socketSource.destroy();
       pipeForward(
-        socketSource,
+        () => socketSource,
         () => net.Socket(),
         {},
       );
@@ -20,8 +20,21 @@ test('pipeForward fail', () => {
     () => {
       const socketSource = net.Socket();
       pipeForward(
-        socketSource,
+        () => socketSource,
         {},
+        {},
+      );
+    },
+    (error) => error instanceof assert.AssertionError,
+  );
+  assert.throws(
+    () => {
+      const socketSource = net.Socket();
+      const socketDest = net.Socket();
+      socketDest.destroy();
+      pipeForward(
+        () => socketSource,
+        () => socketDest,
         {},
       );
     },

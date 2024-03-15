@@ -2,10 +2,13 @@ import assert from 'node:assert';
 import createConnector from './createConnector.mjs';
 
 export default (
-  socketSource,
+  getSourceSocket,
   getDestSocket,
   options = {},
 ) => {
+  assert(typeof getSourceSocket === 'function');
+  assert(typeof getDestSocket === 'function');
+
   const {
     onConnect,
     onIncoming,
@@ -90,7 +93,7 @@ export default (
         }
       },
     },
-    () => socketSource,
+    getSourceSocket,
     controller.signal,
   );
 
