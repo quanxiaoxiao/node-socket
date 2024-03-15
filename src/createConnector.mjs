@@ -36,9 +36,9 @@ const createConnector = (
     isAttachEvents: false,
     isActive: true,
     isConnectEventBind: false,
-    isEndEmit: false,
+    isFinishEmit: false,
     isErrorEventBind: true,
-    isEndEventBind: false,
+    isSocketDoEnd: false,
     isEventsClear: false,
     isSignalEventBind: false,
     outgoingBufList: [],
@@ -73,9 +73,9 @@ const createConnector = (
 
   function handleErrorOnSocket(error) {
     state.isErrorEventBind = false;
-    if (state.isEndEventBind) {
-      if (!state.isEndEmit) {
-        socket.off('end', handleSocketEnd);
+    if (state.isSocketDoEnd) {
+      if (!state.isFinishEmit) {
+        socket.off('finish', handleSocketFinish);
       }
     } else {
       clearEventsListener();
@@ -197,7 +197,7 @@ const createConnector = (
 
   function handleDataOnSocket(chunk) {
     assert(state.isActive);
-    assert(!state.isEndEventBind);
+    assert(!state.isSocketDoEnd);
     if (onData) {
       try {
         if (onData(chunk) === false) {
@@ -229,13 +229,13 @@ const createConnector = (
     }
   }
 
-  function handleSocketEnd() {
-    state.isEndEmit = true;
+  function handleSocketFinish() {
+    state.isFinishEmit = true;
     unbindSocketError();
   }
 
   function connector() {
-    if (!state.isEndEventBind) {
+    if (!state.isSocketDoEnd) {
       clearEventsListener();
       doClose();
       if (!socket.destroyed) {
@@ -254,7 +254,7 @@ const createConnector = (
   connector.resume = resume;
 
   connector.write = (chunk) => {
-    assert(state.isActive && !state.isEndEventBind);
+    assert(state.isActive && !state.isSocketDoEnd);
     if (!state.isAttachEvents) {
       state.outgoingBufList.push(chunk);
       return false;
@@ -266,7 +266,7 @@ const createConnector = (
   };
 
   connector.end = (chunk) => {
-    assert(state.isActive && !state.isEndEventBind && !socket.writableEnded);
+    assert(state.isActive && !state.isSocketDoEnd && !socket.writableEnded);
     if (!state.isConnect) {
       connector();
       emitError(new Error('socket is not connect'));
@@ -274,8 +274,8 @@ const createConnector = (
       clearEventsListener();
       doClose();
       if (socket.writable) {
-        state.isEndEventBind = true;
-        socket.once('end', handleSocketEnd);
+        state.isSocketDoEnd = true;
+        socket.once('finish', handleSocketFinish);
         const bufList = [...state.outgoingBufList];
         state.outgoingBufList = [];
         if (chunk && chunk.length > 0) {
