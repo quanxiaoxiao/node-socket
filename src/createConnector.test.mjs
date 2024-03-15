@@ -1906,3 +1906,43 @@ test('createConnector read epipe', async () => {
   assert.equal(onClose.mock.calls.length, 0);
   assert(controller.signal.aborted);
 });
+
+test('createConnector onClose trigger error', async () => {
+  const port = getPort();
+
+  const server = net.createServer((socket) => {
+    socket.on('data', () => {});
+    setTimeout(() => {
+      socket.destroy();
+    }, 100);
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onConnect = mock.fn(() => {});
+  const onClose = mock.fn(() => {
+    throw new Error('bbb');
+  });
+  const onError = mock.fn((error) => {
+    assert.equal(error.message, 'bbb');
+  });
+
+  createConnector(
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+  await waitFor(1000);
+  server.close();
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 1);
+});

@@ -154,7 +154,11 @@ const createConnector = (
     if (doClose() && onClose) {
       const buf = Buffer.concat(state.incomingBufList);
       state.incomingBufList = [];
-      onClose(buf);
+      try {
+        onClose(buf);
+      } catch (error) {
+        emitError(error);
+      }
     }
   }
 
