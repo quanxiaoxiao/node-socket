@@ -1847,3 +1847,62 @@ test('createConnector signal abort 2', () => {
     server.close();
   }, 2500);
 });
+
+test('createConnector read epipe', async () => {
+  const port = getPort();
+
+  const server = net.createServer((socket) => {
+    const content = 'asdfbgbasd fasdfawefadsf';
+    setTimeout(() => {
+      let j = 0;
+      while (j < 60000) {
+        const s = `${_.times(300).map(() => content).join('')}:${j}`;
+        socket.write(s);
+        j++;
+      }
+    }, 100);
+    socket.on('close', () => {
+      server.close();
+    });
+    socket.on('error', () => {
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+      server.close();
+    });
+  });
+  server.listen(port);
+  const controller = new AbortController();
+
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+  const onData = mock.fn(() => {});
+
+  const onConnect = mock.fn(() => {
+    setTimeout(() => {
+      controller.abort();
+    }, 200);
+  });
+
+  createConnector(
+    {
+      onConnect,
+      onClose,
+      onData,
+      onError,
+    },
+    () => socket,
+    controller.signal,
+  );
+  await waitFor(1000);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert(controller.signal.aborted);
+});
