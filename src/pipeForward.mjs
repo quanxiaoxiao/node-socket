@@ -19,20 +19,55 @@ export default (
   const state = {
     source: null,
     dest: null,
-    isSourceConnect: false,
-    isDestConnect: false,
+    timeStart: performance.now(),
+    timeConnectOnSource: null,
+    timeConnectOnDest: null,
   };
 
-  const isPipe = () => state.isSourceConnect && state.isDestConnect;
+  const isPipe = () => {
+    if (state.timeConnectOnSource == null) {
+      return false;
+    }
+    if (state.timeConnectOnDest == null) {
+      return false;
+    }
+    return true;
+  };
+
+  const getState = () => {
+    const result = {
+      timeConnectOnSource: null,
+      timeConnectOnDest: null,
+      timeConnect: null,
+    };
+    if (state.timeConnectOnSource != null) {
+      result.timeConnectOnSource = state.timeConnectOnSource - state.timeStart;
+    }
+    if (state.timeConnectOnDest != null) {
+      result.timeConnectOnDest = state.timeConnectOnDest - state.timeStart;
+    }
+    if (result.timeConnectOnDest != null && result.timeConnectOnSource != null) {
+      result.timeConnect = Math.max(result.timeConnectOnSource, result.timeConnectOnDest);
+    }
+    return result;
+  };
 
   state.source = createConnector(
     {
       onConnect: () => {
-        state.isSourceConnect = true;
-      },
-      onData: (chunk) => state.dest.write(chunk),
-      onDrain: () => {
         assert(!controller.signal.aborted);
+        state.timeConnectOnSource = performance.now();
+        if (onConnect && isPipe()) {
+          onConnect(getState());
+        }
+      },
+      onData: (chunk) => {
+        if (onOutgoing) {
+          onOutgoing(chunk);
+        }
+        return state.dest.write(chunk);
+      },
+      onDrain: () => {
         state.dest.resume();
       },
       onClose: () => {
@@ -42,10 +77,17 @@ export default (
         } else {
           controller.abort();
         }
+        if (onClose) {
+          onClose(getState());
+        }
       },
-      onError: () => {
-        assert(!controller.signal.aborted);
-        controller.abort();
+      onError: (error) => {
+        if (!controller.signal.aborted) {
+          controller.abort();
+          if (onError) {
+            onError(error, getState());
+          }
+        }
       },
     },
     () => socketSource,
@@ -55,9 +97,18 @@ export default (
   state.dest = createConnector(
     {
       onConnect: () => {
-        state.isDestConnect = true;
+        assert(!controller.signal.aborted);
+        state.timeConnectOnDest = performance.now();
+        if (onConnect && isPipe()) {
+          onConnect(getState());
+        }
       },
-      onData: (chunk) => state.source.write(chunk),
+      onData: (chunk) => {
+        if (onIncoming) {
+          onIncoming(chunk);
+        }
+        return state.source.write(chunk);
+      },
       onDrain: () => {
         state.source.resume();
       },
@@ -68,10 +119,17 @@ export default (
         } else {
           controller.abort();
         }
+        if (onClose) {
+          onClose(getState());
+        }
       },
-      onError: () => {
-        assert(!controller.signal.aborted);
-        controller.abort();
+      onError: (error) => {
+        if (!controller.signal.aborted) {
+          controller.abort();
+          if (onError) {
+            onError(error, getState());
+          }
+        }
       },
     },
     getDestSocket,
