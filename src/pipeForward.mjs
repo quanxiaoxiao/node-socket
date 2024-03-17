@@ -15,6 +15,7 @@ export default (
     onError,
     onIncoming,
     onOutgoing,
+    timeout,
   } = options;
 
   const controller = new AbortController();
@@ -58,6 +59,7 @@ export default (
 
   state.source = createConnector(
     {
+      timeout,
       onConnect: () => {
         assert(!controller.signal.aborted);
         state.timeConnectOnSource = performance.now();
@@ -106,6 +108,7 @@ export default (
 
   state.dest = createConnector(
     {
+      timeout,
       onConnect: () => {
         assert(!controller.signal.aborted);
         state.timeConnectOnDest = performance.now();
