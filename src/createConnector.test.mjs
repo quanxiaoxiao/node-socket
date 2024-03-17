@@ -53,6 +53,27 @@ test('createConnector fail', () => {
   );
 });
 
+test('createConnector unable connect', { only: true }, async () => {
+  const socket = net.Socket();
+  const onError = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  const onConnect = mock.fn(() => {});
+  const onData = mock.fn(() => {});
+  createConnector(
+    {
+      onConnect,
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+  await waitFor(500);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onConnect.mock.calls.length, 1);
+});
+
 test('createConnector unable connect remote', async () => {
   const port = getPort();
   const socket = net.Socket();
