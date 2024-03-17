@@ -20,6 +20,7 @@ export default (
   const controller = new AbortController();
 
   const state = {
+    tick: null,
     source: null,
     dest: null,
     timeStart: performance.now(),
@@ -60,8 +61,14 @@ export default (
       onConnect: () => {
         assert(!controller.signal.aborted);
         state.timeConnectOnSource = performance.now();
-        if (onConnect && isPipe()) {
-          onConnect(getState());
+        if (isPipe()) {
+          if (state.tick != null) {
+            clearTimeout(state.tick);
+            state.tick = null;
+          }
+          if (onConnect) {
+            onConnect(getState());
+          }
         }
       },
       onData: (chunk) => {
@@ -102,8 +109,14 @@ export default (
       onConnect: () => {
         assert(!controller.signal.aborted);
         state.timeConnectOnDest = performance.now();
-        if (onConnect && isPipe()) {
-          onConnect(getState());
+        if (isPipe()) {
+          if (state.tick != null) {
+            clearTimeout(state.tick);
+            state.tick = null;
+          }
+          if (onConnect) {
+            onConnect(getState());
+          }
         }
       },
       onData: (chunk) => {
@@ -138,4 +151,21 @@ export default (
     getDestSocket,
     controller.signal,
   );
+
+  controller.signal.addEventListener('abort', () => {
+    if (state.tick != null) {
+      clearTimeout(state.tick);
+      state.tick = null;
+    }
+  }, { once: true });
+
+  state.tick = setTimeout(() => {
+    state.tick = null;
+    if (!controller.signal.aborted && !isPipe()) {
+      controller.abort();
+      if (onError) {
+        onError(new Error('pipe error'), getState());
+      }
+    }
+  }, 1000 * 15);
 };
