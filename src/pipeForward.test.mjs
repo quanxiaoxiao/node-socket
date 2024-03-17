@@ -364,7 +364,9 @@ test('pipeForward onIncoming', async () => {
   const onConnect = mock.fn(() => {});
   const onClose = mock.fn(() => {});
   const onError = mock.fn(() => {});
-  const onIncoming = mock.fn(() => {});
+  const onIncoming = mock.fn((chunk) => {
+    assert.equal(chunk.toString(), 'quan');
+  });
   const onOutgoing = mock.fn(() => {});
 
   pipeForward(
@@ -385,6 +387,56 @@ test('pipeForward onIncoming', async () => {
   assert.equal(handleDataOnSocket1.mock.calls.length, 1);
   assert.equal(onIncoming.mock.calls.length, 1);
   assert.equal(onOutgoing.mock.calls.length, 0);
+  server1.close();
+  server2.close();
+});
+
+test('pipeForward onOutgoing', async () => {
+  const port1 = getPort();
+  const port2 = getPort();
+  const handleDataOnSocket2 = mock.fn((chunk) => {
+    assert.equal(chunk.toString(), 'quan');
+  });
+  const server1 = net.createServer((socket) => {
+    setTimeout(() => {
+      socket.end(Buffer.from('quan'));
+    }, 100);
+  });
+  const server2 = net.createServer((socket) => {
+    socket.on('data', handleDataOnSocket2);
+  });
+  server1.listen(port1);
+  server2.listen(port2);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+  const onIncoming = mock.fn(() => {});
+  const onOutgoing = mock.fn((chunk) => {
+    assert.equal(chunk.toString(), 'quan');
+  });
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onIncoming,
+      onOutgoing,
+      onError,
+    },
+  );
+  await waitFor(500);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(handleDataOnSocket2.mock.calls.length, 1);
+  assert.equal(onIncoming.mock.calls.length, 0);
+  assert.equal(onOutgoing.mock.calls.length, 1);
   server1.close();
   server2.close();
 });
