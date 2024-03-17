@@ -344,11 +344,11 @@ test('pipeForward 4', async () => {
 test('pipeForward onIncoming', async () => {
   const port1 = getPort();
   const port2 = getPort();
-  const handleDataOnSocket2 = mock.fn((chunk) => {
+  const handleDataOnSocket1 = mock.fn((chunk) => {
     assert.equal(chunk.toString(), 'quan');
   });
   const server1 = net.createServer((socket) => {
-    socket.on('data', handleDataOnSocket2);
+    socket.on('data', handleDataOnSocket1);
   });
   const server2 = net.createServer((socket) => {
     setTimeout(() => {
@@ -382,7 +382,7 @@ test('pipeForward onIncoming', async () => {
   assert.equal(onConnect.mock.calls.length, 1);
   assert.equal(onError.mock.calls.length, 0);
   assert.equal(onClose.mock.calls.length, 1);
-  assert.equal(handleDataOnSocket2.mock.calls.length, 1);
+  assert.equal(handleDataOnSocket1.mock.calls.length, 1);
   assert.equal(onIncoming.mock.calls.length, 1);
   assert.equal(onOutgoing.mock.calls.length, 0);
   server1.close();
