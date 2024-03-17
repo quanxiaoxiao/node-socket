@@ -1,10 +1,18 @@
 {
   "name": "@quanxiaoxiao/socket",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage"
+  },
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.23.10",
@@ -19,7 +27,7 @@
     "eslint-plugin-react-hooks": "^4.6.0"
   },
   "engines": {
-    "node": ">= 14.18.0"
+    "node": ">= 20.0.0"
   },
   "dependencies": {
     "lodash": "^4.17.21"
