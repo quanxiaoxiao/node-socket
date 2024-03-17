@@ -112,3 +112,231 @@ test('pipeForward', async () => {
   server1.close();
   server2.close();
 });
+
+test('pipeForward unable connect', async () => {
+  const port1 = getPort();
+  const port2 = getPort();
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn((error, state) => {
+    assert.equal(state.timeConnectOnSource, null);
+    assert.equal(state.timeConnectOnDest, null);
+  });
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
+  await waitFor(500);
+  assert.equal(onConnect.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onError.mock.calls.length, 1);
+});
+
+test('pipeForward unable connect 2', async () => {
+  const port1 = getPort();
+  const port2 = getPort();
+
+  const server1 = net.createServer(() => {});
+  server1.listen(port1);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn((error, state) => {
+    assert.equal(state.timeConnectOnDest, null);
+  });
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
+  await waitFor(500);
+  assert.equal(onConnect.mock.calls.length, 0);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onError.mock.calls.length, 1);
+  server1.close();
+});
+
+test('pipeForward 2', async () => {
+  const port1 = getPort();
+  const port2 = getPort();
+  const server1 = net.createServer(() => {});
+  const server2 = net.createServer(() => {});
+  server1.listen(port1);
+  server2.listen(port2);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn((state) => {
+    assert.equal(typeof state.timeConnect, 'number');
+    assert.equal(typeof state.timeConnectOnSource, 'number');
+    assert.equal(typeof state.timeConnectOnDest, 'number');
+    socketDest.destroy();
+  });
+  const onClose = mock.fn((state) => {
+    assert.equal(typeof state.timeConnect, 'number');
+    assert.equal(typeof state.timeConnectOnSource, 'number');
+    assert.equal(typeof state.timeConnectOnDest, 'number');
+  });
+  const onError = mock.fn(() => {});
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
+  await waitFor(500);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  server1.close();
+  server2.close();
+});
+
+test('pipeForward 3', async () => {
+  const port1 = getPort();
+  const port2 = getPort();
+  const server1 = net.createServer((socket) => {
+    setTimeout(() => {
+      socket.destroy();
+    }, 100);
+  });
+  const server2 = net.createServer(() => {});
+  server1.listen(port1);
+  server2.listen(port2);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn((state) => {
+    assert.equal(typeof state.timeConnect, 'number');
+    assert.equal(typeof state.timeConnectOnSource, 'number');
+    assert.equal(typeof state.timeConnectOnDest, 'number');
+  });
+  const onClose = mock.fn((state) => {
+    assert.equal(typeof state.timeConnect, 'number');
+    assert.equal(typeof state.timeConnectOnSource, 'number');
+    assert.equal(typeof state.timeConnectOnDest, 'number');
+  });
+  const onError = mock.fn(() => {});
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
+  await waitFor(500);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  server1.close();
+  server2.close();
+});
+
+test('pipeForward 3', async () => {
+  const port1 = getPort();
+  const port2 = getPort();
+  const server1 = net.createServer(() => {});
+  const server2 = net.createServer((socket) => {
+    setTimeout(() => {
+      socket.destroy();
+    }, 100);
+  });
+  server1.listen(port1);
+  server2.listen(port2);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn((state) => {
+    assert.equal(typeof state.timeConnect, 'number');
+    assert.equal(typeof state.timeConnectOnSource, 'number');
+    assert.equal(typeof state.timeConnectOnDest, 'number');
+  });
+  const onClose = mock.fn((state) => {
+    assert.equal(typeof state.timeConnect, 'number');
+    assert.equal(typeof state.timeConnectOnSource, 'number');
+    assert.equal(typeof state.timeConnectOnDest, 'number');
+  });
+  const onError = mock.fn(() => {});
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
+  await waitFor(500);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  server1.close();
+  server2.close();
+});
+
+test('pipeForward 4', { only: true }, async () => {
+  const port1 = getPort();
+  const port2 = getPort();
+  const server1 = net.createServer((socket) => {
+    socket.destroy();
+  });
+  const server2 = net.createServer((socket) => {
+    socket.destroy();
+  });
+  server1.listen(port1);
+  server2.listen(port2);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn(() => {
+  });
+  const onClose = mock.fn(() => {
+  });
+  const onError = mock.fn(() => {});
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
+  await waitFor(500);
+  // assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 0);
+  server1.close();
+  server2.close();
+});
