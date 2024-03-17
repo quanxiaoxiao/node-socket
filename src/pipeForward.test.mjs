@@ -1,6 +1,9 @@
 import { test, mock } from 'node:test';
 import net from 'node:net';
 import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
+import _ from 'lodash';
 import pipeForward from './pipeForward.mjs';
 
 const _getPort = () => {
@@ -439,4 +442,104 @@ test('pipeForward onOutgoing', async () => {
   assert.equal(onOutgoing.mock.calls.length, 1);
   server1.close();
   server2.close();
+});
+
+test('pipeForward 2', () => {
+  const port1 = getPort();
+  const port2 = getPort();
+  const count = 30000;
+  const server1 = net.createServer((socket) => {
+    const content = '-------socket1';
+    let i = 0;
+    setTimeout(() => {
+      while (i < count) {
+        const s = `${_.times(800).map(() => content).join('')}:${i}`;
+        socket.write(s);
+        i++;
+      }
+      socket.end();
+    }, 300);
+  });
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_abdsf1`);
+  const ws = fs.createWriteStream(pathname);
+  const server2 = net.createServer((socket) => {
+    socket.pipe(ws);
+  });
+  server1.listen(port1);
+  server2.listen(port2);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn(() => {});
+  const onClose = mock.fn(() => {
+    setTimeout(() => {
+      const buf = fs.readFileSync(pathname);
+      assert(new RegExp(`:${count - 1}$`).test(buf));
+      fs.unlinkSync(pathname);
+      server1.close();
+      server2.close();
+    }, 200);
+  });
+  const onError = mock.fn(() => {});
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
+});
+
+test('pipeForward 3', () => {
+  const port1 = getPort();
+  const port2 = getPort();
+  const count = 30000;
+  const server1 = net.createServer((socket) => {
+    const content = '-------socket1';
+    let i = 0;
+    setTimeout(() => {
+      while (i < count) {
+        const s = `${_.times(800).map(() => content).join('')}:${i}`;
+        socket.write(s);
+        i++;
+      }
+      socket.end();
+    }, 300);
+  });
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_abdsf8`);
+  const ws = fs.createWriteStream(pathname);
+  const server2 = net.createServer((socket) => {
+    socket.pipe(ws);
+  });
+  server1.listen(port1);
+  server2.listen(port2);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn(() => {});
+  const onClose = mock.fn(() => {
+    setTimeout(() => {
+      const buf = fs.readFileSync(pathname);
+      assert(new RegExp(`:${count - 1}$`).test(buf));
+      fs.unlinkSync(pathname);
+      server1.close();
+      server2.close();
+    }, 200);
+  });
+  const onError = mock.fn(() => {});
+
+  pipeForward(
+    () => socketDest,
+    () => socketSource,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
 });
