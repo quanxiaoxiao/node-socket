@@ -11,10 +11,10 @@ export default (
 
   const {
     onConnect,
-    onIncoming,
-    onOutgoing,
     onClose,
     onError,
+    onIncoming,
+    onOutgoing,
   } = options;
 
   const controller = new AbortController();
