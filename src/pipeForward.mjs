@@ -60,7 +60,7 @@ export default (
   state.source = createConnector(
     {
       timeout,
-      onConnect: () => {
+      onConnect: async () => {
         assert(!controller.signal.aborted);
         state.timeConnectOnSource = performance.now();
         if (isPipe()) {
@@ -69,7 +69,7 @@ export default (
             state.tick = null;
           }
           if (onConnect) {
-            onConnect(getState());
+            await onConnect(getState());
           }
         }
       },
@@ -109,7 +109,7 @@ export default (
   state.dest = createConnector(
     {
       timeout,
-      onConnect: () => {
+      onConnect: async () => {
         assert(!controller.signal.aborted);
         state.timeConnectOnDest = performance.now();
         if (isPipe()) {
@@ -118,7 +118,7 @@ export default (
             state.tick = null;
           }
           if (onConnect) {
-            onConnect(getState());
+            await onConnect(getState());
           }
         }
       },

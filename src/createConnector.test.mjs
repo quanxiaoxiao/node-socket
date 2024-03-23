@@ -53,7 +53,7 @@ test('createConnector fail', () => {
   );
 });
 
-test('createConnector unable connect', { only: true }, async () => {
+test('createConnector unable connect', async () => {
   const socket = net.Socket();
   const onError = mock.fn(() => {});
   const onClose = mock.fn(() => {});
