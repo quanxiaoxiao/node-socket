@@ -84,11 +84,10 @@ export default (
       },
       onClose: () => {
         assert(!controller.signal.aborted);
-        if (isPipe()) {
-          state.dest.end();
-        } else {
-          controller.abort();
+        if (!isPipe()) {
+          throw new Error('Pipe connect fail, source socket is close, but dest socket is not connect');
         }
+        state.dest.end();
         if (onClose) {
           onClose(getState());
         }
@@ -133,11 +132,10 @@ export default (
       },
       onClose: () => {
         assert(!controller.signal.aborted);
-        if (isPipe()) {
-          state.source.end();
-        } else {
-          controller.abort();
+        if (!isPipe()) {
+          throw new Error('Pipe connect fail, dest socket is close, but souce socket is not connect');
         }
+        state.source.end();
         if (onClose) {
           onClose(getState());
         }
