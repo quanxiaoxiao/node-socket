@@ -34,6 +34,7 @@ const createConnector = (
   const state = {
     isConnect: false,
     isAttachEvents: false,
+    isDetach: false,
     isActive: true,
     isConnectEventBind: false,
     isFinishEmit: false,
@@ -273,7 +274,7 @@ const createConnector = (
     assert(state.isActive && !state.isSocketDoEnd && !socket.writableEnded);
     if (!state.isConnect) {
       connector();
-      emitError(new Error('socket is not connect'));
+      emitError(new Error('end fail, socket is not connect'));
     } else {
       clearEventsListener();
       doClose();
@@ -295,6 +296,20 @@ const createConnector = (
     }
   };
 
+  connector.detach = () => {
+    if (!state.isActive || state.isSocketDoEnd || state.isDetach) {
+      return null;
+    }
+    state.isDetach = true;
+    clearEventsListener();
+    if (state.isSignalEventBind) {
+      state.isSignalEventBind = false;
+      signal.removeEventListener('abort', handleAbortOnSignal);
+    }
+    socket.off('error', handleErrorOnSocket);
+    return socket;
+  };
+
   socket.once('error', handleErrorOnSocket);
 
   if (socket.connecting) {
@@ -303,7 +318,9 @@ const createConnector = (
   } else {
     socket.once('close', handleCloseOnSocket);
     process.nextTick(() => {
-      handleConnectOnSocket();
+      if (!state.isDetach) {
+        handleConnectOnSocket();
+      }
     });
   }
 
