@@ -165,7 +165,7 @@ export default (
     if (!controller.signal.aborted && !isPipe()) {
       controller.abort();
       if (onError) {
-        onError(new Error('pipe error'), getState());
+        onError(new Error('Connect Pipe fail'), getState());
       }
     }
   }, 1000 * 15);
