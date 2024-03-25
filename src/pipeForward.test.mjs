@@ -587,3 +587,44 @@ test('pipeForward onClose trigger error', async () => {
   server1.close();
   server2.close();
 });
+
+test('pipeForward socket.end', async () => {
+  const port1 = getPort();
+  const port2 = getPort();
+  const server1 = net.createServer(() => {});
+  const server2 = net.createServer(() => {});
+  server1.listen(port1);
+  server2.listen(port2);
+
+  const socketSource = createSockert(port1);
+  const socketDest = createSockert(port2);
+
+  const onConnect = mock.fn(() => {
+    setTimeout(() => {
+      socketDest.end();
+    }, 100);
+  });
+  const onClose = mock.fn((state) => {
+    assert.equal(typeof state.timeConnect, 'number');
+    assert.equal(typeof state.timeConnectOnSource, 'number');
+    assert.equal(typeof state.timeConnectOnDest, 'number');
+    assert(socketSource.writableEnded);
+  });
+  const onError = mock.fn(() => {});
+
+  pipeForward(
+    () => socketSource,
+    () => socketDest,
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+  );
+  await waitFor(500);
+  assert.equal(onConnect.mock.calls.length, 1);
+  assert.equal(onClose.mock.calls.length, 1);
+  assert.equal(onError.mock.calls.length, 0);
+  server1.close();
+  server2.close();
+});
