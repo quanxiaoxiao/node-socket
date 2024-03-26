@@ -2,6 +2,7 @@
 import assert from 'node:assert';
 import net from 'node:net';
 import fs from 'node:fs';
+import { PassThrough } from 'node:stream';
 import path from 'node:path';
 import _ from 'lodash';
 import { test, mock } from 'node:test';
@@ -2061,4 +2062,42 @@ test('createConnector detach 2', async () => {
   socket.destroy();
   await waitFor(100);
   server.close();
+});
+
+test('createConnector onData trigger error', () => {
+  const socket = new PassThrough();
+  const onError = mock.fn((error) => {
+    assert.equal(error.message, 'aaa');
+    assert(!socket.eventNames().includes('close'));
+    assert(!socket.eventNames().includes('data'));
+  });
+  const onClose = mock.fn(() => {});
+  const onConnect = mock.fn(() => {});
+  const onData = mock.fn((chunk) => {
+    if (chunk.toString() === 'bbb') {
+      throw new Error('aaa');
+    }
+  });
+
+  createConnector(
+    {
+      onConnect,
+      onData,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+  socket.write(Buffer.from('aaa'));
+  setTimeout(() => {
+    socket.write(Buffer.from('bbb'));
+  }, 100);
+  setTimeout(() => {
+    assert.equal(onError.mock.calls.length, 1);
+    assert.equal(onConnect.mock.calls.length, 1);
+    assert.equal(onData.mock.calls.length, 2);
+    assert.equal(onClose.mock.calls.length, 0);
+    assert(socket.destroyed);
+    assert(!socket.eventNames().includes('error'));
+  }, 1000);
 });
