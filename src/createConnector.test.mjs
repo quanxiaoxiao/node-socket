@@ -421,7 +421,7 @@ test('createConnector, close before connect', async () => {
   assert(socket.eventNames().includes('connect'));
   connector();
   assert(!socket.eventNames().includes('connect'));
-  assert(socket.eventNames().includes('error'));
+  assert(!socket.eventNames().includes('error'));
   assert(socket.destroyed);
   await waitFor(100);
   assert.equal(handleCloseOnSocket.mock.calls.length, 0);
@@ -950,7 +950,7 @@ test('createConnector signal', async () => {
   assert(!socket.destroyed);
   controller.abort();
   assert(socket.destroyed);
-  assert(socket.eventNames().includes('error'));
+  assert(!socket.eventNames().includes('error'));
   assert(!socket.eventNames().includes('connect'));
 
   assert.throws(
@@ -1436,7 +1436,7 @@ test('createConnector end after write', async () => {
   const onConnect = mock.fn(() => {
     state.connector.end(Buffer.from('ccbb'));
     setTimeout(() => {
-      assert(socket.eventNames().includes('error'));
+      assert(!socket.eventNames().includes('error'));
       assert(!socket.eventNames().includes('data'));
     });
     try {
