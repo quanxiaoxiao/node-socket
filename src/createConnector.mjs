@@ -199,24 +199,13 @@ const createConnector = (
     }
   }
 
-  function pause() {
-    if (state.isActive && !socket.isPaused()) {
-      socket.pause();
-    }
-  }
-
-  function resume() {
-    if (state.isActive && socket.isPaused()) {
-      socket.resume();
-    }
-  }
-
   function handleDataOnSocket(chunk) {
     assert(state.isActive);
     if (onData) {
       try {
-        if (onData(chunk) === false) {
-          pause();
+        const ret = onData(chunk);
+        if (ret === false && !socket.isPaused()) {
+          socket.pause();
         }
       } catch (error) {
         clearEventListeners();
@@ -263,8 +252,16 @@ const createConnector = (
     connector();
   }
 
-  connector.pause = pause;
-  connector.resume = resume;
+  connector.pause = () => {
+    if (state.isActive && !socket.isPaused()) {
+      socket.pause();
+    }
+  };
+  connector.resume = () => {
+    if (state.isActive && socket.isPaused()) {
+      socket.resume();
+    }
+  };
 
   connector.write = (chunk) => {
     assert(state.isActive && !state.isSocketFinishBind);
