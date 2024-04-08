@@ -115,8 +115,7 @@ const createConnector = (
   }
 
   function handleDrainOnSocket() {
-    assert(state.isActive);
-    if (onDrain) {
+    if (state.isActive && onDrain) {
       onDrain();
     }
   }
@@ -176,21 +175,20 @@ const createConnector = (
   }
 
   function handleCloseOnSocket() {
-    assert(state.isActive);
     state.isCloseEventBind = false;
     clearEventListeners();
     unbindSignalEvent();
     unbindSocketError();
     const buf = Buffer.concat(state.incomingBufList);
     state.incomingBufList = [];
-    state.isActive = false;
-    if (onClose) {
+    if (state.isActive && onClose) {
       try {
         onClose(buf);
       } catch (error) {
         emitError(error);
       }
     }
+    state.isActive = false;
   }
 
   function handleTimeoutOnSocket() {
@@ -200,27 +198,28 @@ const createConnector = (
   }
 
   function handleDataOnSocket(chunk) {
-    assert(state.isActive);
-    if (onData) {
-      try {
-        const ret = onData(chunk);
-        if (ret === false && !socket.isPaused()) {
-          socket.pause();
+    if (state.isActive) {
+      if (onData) {
+        try {
+          const ret = onData(chunk);
+          if (ret === false && !socket.isPaused()) {
+            socket.pause();
+          }
+        } catch (error) {
+          clearEventListeners();
+          unbindSignalEvent();
+          if (!socket.destroyed) {
+            socket.destroy();
+          }
+          unbindSocketError();
+          if (state.isActive) {
+            state.isActive = false;
+            emitError(error);
+          }
         }
-      } catch (error) {
-        clearEventListeners();
-        unbindSignalEvent();
-        if (!socket.destroyed) {
-          socket.destroy();
-        }
-        unbindSocketError();
-        if (state.isActive) {
-          state.isActive = false;
-          emitError(error);
-        }
+      } else {
+        state.incomingBufList.push(chunk);
       }
-    } else {
-      state.incomingBufList.push(chunk);
     }
   }
 
