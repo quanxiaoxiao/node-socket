@@ -33,14 +33,14 @@ const createConnector = (
     isConnect: false,
     isDetach: false,
     isActive: true,
-    isDataEventBind: false,
+    isSocketDataEventBind: false,
     isConnectActive: false,
-    isTimeoutEventBind: false,
-    isConnectEventBind: false,
-    isErrorEventBind: true,
-    isCloseEventBind: false,
+    isSocketTimeoutEventBind: false,
+    isSocketConnectEventBind: false,
+    isSocketErrorEventBind: true,
+    isSocketCloseEventBind: false,
     isSocketFinishBind: false,
-    isDrainEventBind: false,
+    isSocketDrainEventBind: false,
     isSignalEventBind: !!signal,
     outgoingBufList: [],
     incomingBufList: [],
@@ -53,39 +53,36 @@ const createConnector = (
     }
   }
 
-  function unbindSocketError() {
-    if (state.isErrorEventBind) {
+  function unbindEventSocketError() {
+    if (state.isSocketErrorEventBind) {
       setTimeout(() => {
-        if (state.isErrorEventBind) {
-          state.isErrorEventBind = false;
+        if (state.isSocketErrorEventBind) {
+          state.isSocketErrorEventBind = false;
           socket.off('error', handleErrorOnSocket);
         }
       }, 100);
     }
   }
 
-  function unbindEventSocketClose() {
-    if (state.isCloseEventBind) {
-      state.isCloseEventBind = false;
-      socket.off('close', handleCloseOnSocket);
-    }
-  }
-
-  function clearEventListeners() {
-    if (state.isConnectEventBind) {
-      state.isConnectEventBind = false;
+  function clearSocketEvents() {
+    if (state.isSocketConnectEventBind) {
+      state.isSocketConnectEventBind = false;
       socket.off('connect', handleConnectOnSocket);
     }
-    if (state.isDataEventBind) {
-      state.isDataEventBind = false;
+    if (state.isSocketCloseEventBind) {
+      state.isSocketCloseEventBind = false;
+      socket.off('close', handleCloseOnSocket);
+    }
+    if (state.isSocketDataEventBind) {
+      state.isSocketDataEventBind = false;
       socket.off('data', handleDataOnSocket);
     }
-    if (state.isDrainEventBind) {
-      state.isDataEventBind = false;
+    if (state.isSocketDrainEventBind) {
+      state.isSocketDataEventBind = false;
       socket.off('drain', handleDrainOnSocket);
     }
-    if (state.isTimeoutEventBind) {
-      state.isTimeoutEventBind = false;
+    if (state.isSocketTimeoutEventBind) {
+      state.isSocketTimeoutEventBind = false;
       socket.off('timeout', handleTimeoutOnSocket);
     }
   }
@@ -99,9 +96,8 @@ const createConnector = (
   }
 
   function handleErrorOnSocket(error) {
-    state.isErrorEventBind = false;
-    clearEventListeners();
-    unbindEventSocketClose();
+    state.isSocketErrorEventBind = false;
+    clearSocketEvents();
     unbindEventSignal();
     if (state.isActive) {
       state.isActive = false;
@@ -111,7 +107,7 @@ const createConnector = (
     }
     if (state.isSocketFinishBind) {
       state.isSocketFinishBind = false;
-      socket.off('finish', handleSocketFinish);
+      socket.off('finish', handleFinishOnSocket);
     }
     if (!socket.destroyed) {
       socket.destroy();
@@ -127,11 +123,11 @@ const createConnector = (
   async function handleConnectOnSocket() {
     assert(state.isActive);
     assert(!state.isConnect);
-    if (state.isConnectEventBind) {
-      state.isConnectEventBind = false;
+    if (state.isSocketConnectEventBind) {
+      state.isSocketConnectEventBind = false;
     }
-    if (!state.isCloseEventBind) {
-      state.isCloseEventBind = true;
+    if (!state.isSocketCloseEventBind) {
+      state.isSocketCloseEventBind = true;
       socket.once('close', handleCloseOnSocket);
     }
     state.isConnect = true;
@@ -139,13 +135,12 @@ const createConnector = (
       try {
         await onConnect();
       } catch (error) {
-        clearEventListeners();
-        unbindEventSocketClose();
+        clearSocketEvents();
         unbindEventSignal();
         if (!socket.destroyed) {
           socket.destroy();
         }
-        unbindSocketError();
+        unbindEventSocketError();
         if (state.isActive) {
           state.isActive = false;
           emitError(error);
@@ -153,14 +148,14 @@ const createConnector = (
       }
     }
     if (state.isActive && !state.isSocketFinishBind) {
-      state.isDataEventBind = true;
+      state.isSocketDataEventBind = true;
       socket.on('data', handleDataOnSocket);
       if (timeout != null) {
         socket.setTimeout(timeout);
-        state.isTimeoutEventBind = true;
+        state.isSocketTimeoutEventBind = true;
         socket.once('timeout', handleTimeoutOnSocket);
       }
-      state.isDrainEventBind = true;
+      state.isSocketDrainEventBind = true;
       socket.on('drain', handleDrainOnSocket);
       process.nextTick(() => {
         if (state.isActive) {
@@ -180,10 +175,10 @@ const createConnector = (
   }
 
   function handleCloseOnSocket() {
-    state.isCloseEventBind = false;
-    clearEventListeners();
+    state.isSocketCloseEventBind = false;
+    clearSocketEvents();
     unbindEventSignal();
-    unbindSocketError();
+    unbindEventSocketError();
     const buf = Buffer.concat(state.incomingBufList);
     state.incomingBufList = [];
     if (state.isActive && onClose) {
@@ -211,13 +206,12 @@ const createConnector = (
             socket.pause();
           }
         } catch (error) {
-          clearEventListeners();
-          unbindEventSocketClose();
+          clearSocketEvents();
           unbindEventSignal();
           if (!socket.destroyed) {
             socket.destroy();
           }
-          unbindSocketError();
+          unbindEventSocketError();
           if (state.isActive) {
             state.isActive = false;
             emitError(error);
@@ -229,10 +223,10 @@ const createConnector = (
     }
   }
 
-  function handleSocketFinish() {
+  function handleFinishOnSocket() {
     state.isSocketFinishBind = false;
-    if (state.isErrorEventBind) {
-      state.isErrorEventBind = false;
+    if (state.isSocketErrorEventBind) {
+      state.isSocketErrorEventBind = false;
       socket.off('error', handleErrorOnSocket);
     }
   }
@@ -240,11 +234,10 @@ const createConnector = (
   function connector() {
     if (state.isActive) {
       state.isActive = false;
-      clearEventListeners();
-      unbindEventSocketClose();
+      clearSocketEvents();
       unbindEventSignal();
-      if (state.isErrorEventBind) {
-        state.isErrorEventBind = false;
+      if (state.isSocketErrorEventBind) {
+        state.isSocketErrorEventBind = false;
         socket.off('error', handleErrorOnSocket);
       }
       if (!socket.destroyed) {
@@ -287,11 +280,10 @@ const createConnector = (
       connector();
       emitError(new Error('end fail, socket is not connect'));
     } else {
-      clearEventListeners();
-      unbindEventSocketClose();
+      clearSocketEvents();
       unbindEventSignal();
       state.isSocketFinishBind = true;
-      socket.once('finish', handleSocketFinish);
+      socket.once('finish', handleFinishOnSocket);
       const bufList = [...state.outgoingBufList];
       state.outgoingBufList = [];
       if (chunk && chunk.length > 0) {
@@ -311,10 +303,9 @@ const createConnector = (
       return null;
     }
     state.isDetach = true;
-    clearEventListeners();
-    unbindEventSocketClose();
+    clearSocketEvents();
     unbindEventSignal();
-    state.isErrorEventBind = false;
+    state.isSocketErrorEventBind = false;
     socket.off('error', handleErrorOnSocket);
     return socket;
   };
@@ -322,10 +313,10 @@ const createConnector = (
   socket.once('error', handleErrorOnSocket);
 
   if (socket.connecting) {
-    state.isConnectEventBind = true;
+    state.isSocketConnectEventBind = true;
     socket.once('connect', handleConnectOnSocket);
   } else {
-    state.isCloseEventBind = true;
+    state.isSocketCloseEventBind = true;
     socket.once('close', handleCloseOnSocket);
     process.nextTick(() => {
       if (!state.isDetach && state.isActive) {
