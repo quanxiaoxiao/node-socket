@@ -1436,7 +1436,7 @@ test('createConnector end after write', async () => {
   const onConnect = mock.fn(() => {
     state.connector.end(Buffer.from('ccbb'));
     setTimeout(() => {
-      assert(!socket.eventNames().includes('error'));
+      assert(socket.eventNames().includes('error'));
       assert(!socket.eventNames().includes('data'));
     });
     try {

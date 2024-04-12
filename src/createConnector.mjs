@@ -225,10 +225,7 @@ const createConnector = (
 
   function handleFinishOnSocket() {
     state.isSocketFinishBind = false;
-    if (state.isSocketErrorEventBind) {
-      state.isSocketErrorEventBind = false;
-      socket.off('error', handleErrorOnSocket);
-    }
+    unbindEventSocketError();
   }
 
   function connector() {
