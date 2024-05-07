@@ -423,7 +423,7 @@ test('createConnector, close before connect', async () => {
   assert(!socket.eventNames().includes('connect'));
   assert(socket.eventNames().includes('error'));
   assert(socket.destroyed);
-  await waitFor(100);
+  await waitFor(300);
   assert.equal(handleCloseOnSocket.mock.calls.length, 0);
   assert(!socket.eventNames().includes('error'));
   assert.equal(onError.mock.calls.length, 0);

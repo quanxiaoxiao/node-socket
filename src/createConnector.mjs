@@ -65,7 +65,7 @@ const createConnector = (
           state.isSocketErrorEventBind = false;
           socket.off('error', handleErrorOnSocket);
         }
-      }, 100);
+      }, 150);
     }
   }
 
@@ -83,7 +83,7 @@ const createConnector = (
       socket.off('data', handleDataOnSocket);
     }
     if (state.isSocketDrainEventBind) {
-      state.isSocketDataEventBind = false;
+      state.isSocketDrainEventBind = false;
       socket.off('drain', handleDrainOnSocket);
     }
     if (state.isSocketTimeoutEventBind) {
