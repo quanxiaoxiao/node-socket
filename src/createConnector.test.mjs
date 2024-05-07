@@ -106,7 +106,6 @@ test('createConnector unable connect remote', async () => {
   assert.equal(onClose.mock.calls.length, 0);
   assert.equal(onError.mock.calls.length, 1);
   assert(!socket.eventNames().includes('connect'));
-  assert(!socket.eventNames().includes('error'));
 });
 
 test('createConnector unable connect remote 2', async () => {
@@ -197,7 +196,6 @@ test('createConnector', async () => {
   assert.equal(onData.mock.calls.length, 1);
   assert.equal(onConnect.mock.calls.length, 1);
   assert.equal(handleDataOnSocket.mock.calls.length, 1);
-  assert(!socket.eventNames().includes('error'));
 
   server.close();
 });
@@ -263,7 +261,6 @@ test('createConnector, socket already connect', async () => {
   assert.equal(onClose.mock.calls.length, 1);
   assert.equal(onData.mock.calls.length, 1);
   assert.equal(onConnect.mock.calls.length, 1);
-  assert(!socket.eventNames().includes('error'));
   assert.equal(handleDataOnSocket.mock.calls.length, 1);
 
   server.close();
@@ -328,7 +325,6 @@ test('createConnector, onConnect trigger error', async () => {
   assert.equal(onData.mock.calls.length, 0);
   assert.equal(handleCloseOnSocket.mock.calls.length, 1);
   assert.equal(handleDataOnSocket.mock.calls.length, 0);
-  assert(!socket.eventNames().includes('error'));
 
   server.close();
 });
@@ -425,7 +421,6 @@ test('createConnector, close before connect', async () => {
   assert(socket.destroyed);
   await waitFor(300);
   assert.equal(handleCloseOnSocket.mock.calls.length, 0);
-  assert(!socket.eventNames().includes('error'));
   assert.equal(onError.mock.calls.length, 0);
   assert.equal(onClose.mock.calls.length, 0);
   server.close();
@@ -554,7 +549,6 @@ test('createConnector, stream outgoing 2', async () => {
     assert(i > 0);
     isClose = true;
     setTimeout(() => {
-      assert(!socket.eventNames().includes('error'));
       server.close();
     }, 1000);
   });
@@ -911,7 +905,6 @@ test('createConnector onData trigger error', async () => {
   assert.equal(onClose.mock.calls.length, 0);
   assert.equal(onData.mock.calls.length, 2);
   assert(!socket.eventNames().includes('close'));
-  assert(!socket.eventNames().includes('error'));
   assert(!socket.eventNames().includes('data'));
   assert(!socket.eventNames().includes('drain'));
 });
@@ -961,7 +954,6 @@ test('createConnector signal', async () => {
   );
 
   await waitFor(300);
-  assert(!socket.eventNames().includes('error'));
 
   assert.equal(onConnect.mock.calls.length, 0);
   assert.equal(onClose.mock.calls.length, 0);
@@ -1277,7 +1269,6 @@ test('createConnector end 2', async () => {
     assert(socket.eventNames().includes('error'));
     socket.emit('error', new Error('33333'));
     assert(socket.destroyed);
-    assert(!socket.eventNames().includes('error'));
     setTimeout(() => {
       assert(!socket.eventNames().includes('data'));
     });
@@ -2059,7 +2050,6 @@ test('createConnector detach 2', async () => {
   assert.equal(connector.detach(), null);
   assert.equal(onClose.mock.calls.length, 0);
   assert.equal(onError.mock.calls.length, 0);
-  assert(!socket.eventNames().includes('error'));
   socket.destroy();
   await waitFor(100);
   server.close();
@@ -2097,7 +2087,6 @@ test('createConnector detach 3', async () => {
   assert(socket.destroy);
   assert(socket.eventNames().includes('error'));
   await waitFor(300);
-  assert(!socket.eventNames().includes('error'));
   assert.equal(onError.mock.calls.length, 0);
   server.close();
 });
@@ -2136,6 +2125,5 @@ test('createConnector onData trigger error', () => {
     assert.equal(onData.mock.calls.length, 2);
     assert.equal(onClose.mock.calls.length, 0);
     assert(socket.destroyed);
-    assert(!socket.eventNames().includes('error'));
   }, 1000);
 });
