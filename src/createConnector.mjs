@@ -231,16 +231,13 @@ const createConnector = (
   function connector() {
     if (state.isActive) {
       state.isActive = false;
-      clearSocketEvents();
-      unbindEventSignal();
-      if (state.isSocketErrorEventBind) {
-        state.isSocketErrorEventBind = false;
-        socket.off('error', handleErrorOnSocket);
-      }
-      if (!socket.destroyed) {
-        socket.destroy();
-      }
     }
+    unbindEventSignal();
+    clearSocketEvents();
+    if (!socket.destroyed) {
+      socket.destroy();
+    }
+    unbindEventSocketError();
   }
 
   function handleAbortOnSignal() {
@@ -304,6 +301,9 @@ const createConnector = (
     unbindEventSignal();
     state.isSocketErrorEventBind = false;
     socket.off('error', handleErrorOnSocket);
+    if (timeout != null) {
+      socket.setTimeout(0);
+    }
     return socket;
   };
 
