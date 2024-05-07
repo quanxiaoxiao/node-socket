@@ -546,7 +546,7 @@ test('createConnector, stream outgoing 2', async () => {
   const onClose = mock.fn(() => {});
 
   const onError = mock.fn(() => {
-    assert(!socket.eventNames().includes('error'));
+    assert(socket.eventNames().includes('error'));
     assert(!socket.eventNames().includes('close'));
     assert(!socket.eventNames().includes('data'));
     assert(!socket.eventNames().includes('drain'));
@@ -554,6 +554,7 @@ test('createConnector, stream outgoing 2', async () => {
     assert(i > 0);
     isClose = true;
     setTimeout(() => {
+      assert(!socket.eventNames().includes('error'));
       server.close();
     }, 1000);
   });
@@ -835,11 +836,10 @@ test('createConnector stream incoming 3', () => {
       fs.unlinkSync(pathname);
       assert.equal(onError.mock.calls.length, 0);
       assert.equal(onClose.mock.calls.length, 0);
-      assert(!socket.eventNames().includes('error'));
       assert(!socket.eventNames().includes('data'));
       assert(!socket.eventNames().includes('drain'));
       assert(!socket.eventNames().includes('close'));
-    }, 200);
+    }, 800);
   });
 
   state.connector = createConnector(
@@ -1098,7 +1098,7 @@ test('createConnector socket emit error', async () => {
     assert(socket.eventNames().includes('error'));
     assert(socket.eventNames().includes('connect'));
     socket.emit('error', new Error('aaaa'));
-    assert(!socket.eventNames().includes('error'));
+    assert(socket.eventNames().includes('error'));
     assert(!socket.eventNames().includes('connect'));
   });
 
@@ -2007,7 +2007,7 @@ test('createConnector detach', async () => {
   assert.equal(s, socket);
   assert(!socket.eventNames().includes('data'));
   assert(!socket.eventNames().includes('drain'));
-  assert(!socket.eventNames().includes('error'));
+  assert(socket.eventNames().includes('error'));
   assert(!socket.eventNames().includes('close'));
   assert.equal(connector.detach(), null);
   await waitFor(100);
@@ -2052,15 +2052,53 @@ test('createConnector detach 2', async () => {
   assert.equal(s, socket);
   assert(!socket.eventNames().includes('data'));
   assert(!socket.eventNames().includes('drain'));
-  assert(!socket.eventNames().includes('error'));
+  assert(socket.eventNames().includes('error'));
   assert(!socket.eventNames().includes('close'));
   await waitFor(500);
   assert.equal(onConnect.mock.calls.length, 0);
   assert.equal(connector.detach(), null);
   assert.equal(onClose.mock.calls.length, 0);
   assert.equal(onError.mock.calls.length, 0);
+  assert(!socket.eventNames().includes('error'));
   socket.destroy();
   await waitFor(100);
+  server.close();
+});
+
+test('createConnector detach 3', async () => {
+  const port = getPort();
+
+  const server = net.createServer(() => {
+  });
+  server.listen(port);
+
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onConnect = mock.fn(() => {});
+  const onClose = mock.fn(() => {});
+
+  const onError = mock.fn(() => {});
+
+  const connector = createConnector(
+    {
+      onConnect,
+      onClose,
+      onError,
+    },
+    () => socket,
+  );
+  connector.detach();
+  assert(!socket.destroyed);
+  socket.emit('error', new Error('aaa'));
+  assert(socket.destroy);
+  assert(socket.eventNames().includes('error'));
+  await waitFor(300);
+  assert(!socket.eventNames().includes('error'));
+  assert.equal(onError.mock.calls.length, 0);
   server.close();
 });
 

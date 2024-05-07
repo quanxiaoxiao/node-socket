@@ -44,6 +44,7 @@ const createConnector = (
     isSignalEventBind: !!signal,
     outgoingBufList: [],
     incomingBufList: [],
+    tickOnUnbindError: null,
   };
 
   function unbindEventSignal() {
@@ -55,7 +56,11 @@ const createConnector = (
 
   function unbindEventSocketError() {
     if (state.isSocketErrorEventBind) {
-      setTimeout(() => {
+      if (state.tickOnUnbindError) {
+        clearTimeout(state.tickOnUnbindError);
+      }
+      state.tickOnUnbindError = setTimeout(() => {
+        state.tickOnUnbindError = null;
         if (state.isSocketErrorEventBind) {
           state.isSocketErrorEventBind = false;
           socket.off('error', handleErrorOnSocket);
@@ -96,12 +101,11 @@ const createConnector = (
   }
 
   function handleErrorOnSocket(error) {
-    state.isSocketErrorEventBind = false;
     clearSocketEvents();
     unbindEventSignal();
     if (state.isActive) {
       state.isActive = false;
-      if (!state.isSocketFinishBind) {
+      if (!state.isSocketFinishBind && !state.isDetach) {
         emitError(error);
       }
     }
@@ -112,6 +116,7 @@ const createConnector = (
     if (!socket.destroyed) {
       socket.destroy();
     }
+    unbindEventSocketError();
   }
 
   function handleDrainOnSocket() {
@@ -181,14 +186,16 @@ const createConnector = (
     unbindEventSocketError();
     const buf = Buffer.concat(state.incomingBufList);
     state.incomingBufList = [];
-    if (state.isActive && onClose) {
-      try {
-        onClose(buf);
-      } catch (error) {
-        emitError(error);
+    if (state.isActive) {
+      state.isActive = false;
+      if (onClose) {
+        try {
+          onClose(buf);
+        } catch (error) {
+          emitError(error);
+        }
       }
     }
-    state.isActive = false;
   }
 
   function handleTimeoutOnSocket() {
@@ -299,15 +306,14 @@ const createConnector = (
     state.isDetach = true;
     clearSocketEvents();
     unbindEventSignal();
-    state.isSocketErrorEventBind = false;
-    socket.off('error', handleErrorOnSocket);
+    unbindEventSocketError();
     if (timeout != null) {
       socket.setTimeout(0);
     }
     return socket;
   };
 
-  socket.once('error', handleErrorOnSocket);
+  socket.on('error', handleErrorOnSocket);
 
   if (socket.connecting) {
     state.isSocketConnectEventBind = true;
