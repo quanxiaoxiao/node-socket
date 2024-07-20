@@ -1607,7 +1607,7 @@ test('createConnector, stream with outgoing abort', () => {
           isPause = true;
         }
         i++;
-      } catch (error) {
+      } catch (error) { // eslint-disable-line
         break;
       }
     }

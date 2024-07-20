@@ -1,4 +1,3 @@
-/* eslint no-use-before-define: 0 */
 import assert from 'node:assert';
 import { Buffer } from 'node:buffer';
 import process from 'node:process';
