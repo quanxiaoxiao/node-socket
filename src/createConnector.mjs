@@ -39,7 +39,6 @@ const createConnector = (
     isConnectActive: false,
     isSocketTimeoutEventBind: false,
     isSocketCloseEventBind: false,
-    isSocketFinishBind: false,
     isSocketDrainEventBind: false,
     isSocketErrorEventBind: false,
     isSignalEventBind: !!signal,
@@ -113,14 +112,9 @@ const createConnector = (
 
     if (state.isActive) {
       state.isActive = false;
-      if (!state.isDetach && !state.isSocketFinishBind) {
+      if (!state.isDetach && !socket.writableEnded) {
         emitError(error);
       }
-    }
-
-    if (state.isSocketFinishBind) {
-      state.isSocketFinishBind = false;
-      socket.off('finish', handleFinishOnSocket);
     }
 
     process.nextTick(() => {
@@ -156,7 +150,15 @@ const createConnector = (
         }
       }
     }
-    if (!state.isDetach && state.isActive && !state.isSocketFinishBind) {
+    while (state.isActive
+      && !socket.writableEnded
+      && state.outgoingBufList.length > 0) {
+      const chunk = state.outgoingBufList.shift();
+      if (chunk.length > 0) {
+        socket.write(chunk);
+      }
+    }
+    if (state.isActive && !socket.writableEnded) {
       state.isSocketDataEventBind = true;
       socket.on('data', handleDataOnSocket);
       if (timeout != null) {
@@ -167,19 +169,13 @@ const createConnector = (
       state.isSocketDrainEventBind = true;
       socket.on('drain', handleDrainOnSocket);
       process.nextTick(() => {
-        if (state.isActive && !state.isDetach) {
+        if (state.isActive && !state.isDetach && !socket.writableEnded) {
           state.isConnectActive = true;
           if (socket.isPaused()) {
             socket.resume();
           }
         }
       });
-    }
-    while (!state.isDetach && state.isActive && state.outgoingBufList.length > 0) {
-      const chunk = state.outgoingBufList.shift();
-      if (chunk.length > 0) {
-        socket.write(chunk);
-      }
     }
   }
 
@@ -232,10 +228,6 @@ const createConnector = (
     }
   }
 
-  function handleFinishOnSocket() {
-    state.isSocketFinishBind = false;
-  }
-
   function connector() {
     checkConnectSignalAbort();
     if (state.isActive) {
@@ -266,7 +258,7 @@ const createConnector = (
   };
 
   connector.write = (chunk) => {
-    assert(state.isActive && !state.isSocketFinishBind);
+    assert(state.isActive && !socket.writableEnded);
     assert(!state.isDetach);
     if (!state.isConnectActive) {
       state.outgoingBufList.push(chunk);
@@ -279,7 +271,7 @@ const createConnector = (
   };
 
   connector.end = (chunk) => {
-    assert(state.isActive && !state.isSocketFinishBind && !socket.writableEnded);
+    assert(state.isActive && !socket.writableEnded);
     assert(!state.isDetach);
     if (!state.isConnect) {
       state.isActive = false;
@@ -289,8 +281,6 @@ const createConnector = (
     } else {
       clearSocketEvents();
       unbindEventSignal();
-      state.isSocketFinishBind = true;
-      socket.once('finish', handleFinishOnSocket);
       const bufList = [...state.outgoingBufList];
       state.outgoingBufList = [];
       if (chunk && chunk.length > 0) {
@@ -306,7 +296,7 @@ const createConnector = (
   };
 
   connector.detach = () => {
-    if (!state.isActive || state.isSocketFinishBind || state.isDetach) {
+    if (!state.isActive || socket.writableEnded || state.isDetach) {
       return null;
     }
     if (!state.isConnect) {

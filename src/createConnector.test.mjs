@@ -426,7 +426,7 @@ test('createConnector, close before connect', async () => {
   server.close();
 });
 
-test('createConnector, stream outgoing', async () => {
+test('createConnector, stream outgoing', async () => { // xxx
   const port = getPort();
   const handleCloseOnSocket = mock.fn(() => {});
   const pathname = path.resolve(process.cwd(), `test_${Date.now()}_111`);
@@ -496,12 +496,10 @@ test('createConnector, stream outgoing', async () => {
       assert(socket.eventNames().includes('data'));
       assert(socket.eventNames().includes('drain'));
       connector.end();
-      assert(socket.eventNames().includes('finish'));
       assert(!socket.eventNames().includes('close'));
       assert(!socket.eventNames().includes('data'));
       assert(!socket.eventNames().includes('drain'));
       setTimeout(() => {
-        assert(!socket.eventNames().includes('finish'));
         server.close();
       }, 100);
     }
@@ -1186,7 +1184,6 @@ test('createConnector end before connect', async () => {
   assert(socket.eventNames().includes('connect'));
 
   connector.end();
-  assert(!socket.eventNames().includes('finish'));
   assert(!socket.eventNames().includes('connect'));
 
   await waitFor(200);
@@ -1219,7 +1216,6 @@ test('createConnector end', async () => {
 
   const onConnect = mock.fn(() => {
     state.connector.end(Buffer.from('aabb'));
-    assert(socket.eventNames().includes('finish'));
   });
   const onData = mock.fn(() => {});
   const onClose = mock.fn(() => {});
@@ -1236,7 +1232,6 @@ test('createConnector end', async () => {
   );
 
   await waitFor(300);
-  assert(!socket.eventNames().includes('finish'));
   assert.equal(onConnect.mock.calls.length, 1);
   assert.equal(onError.mock.calls.length, 0);
   assert.equal(onClose.mock.calls.length, 0);
