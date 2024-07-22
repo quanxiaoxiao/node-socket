@@ -44,7 +44,7 @@ export default (
             state.isEventErrorBind = false;
             socket.off('error', handleErrorOnSocket);
           }
-        }, 100);
+        }, 200);
       }
     }
 

@@ -59,7 +59,7 @@ test('waitConnect connect timeout', async () => {
   const socket = net.Socket();
   try {
     socket.connect({
-      host: '192.168.100.66',
+      host: '192.168.101.66',
       port: 9998,
     });
     await waitConnect(socket, timeout);
@@ -83,7 +83,7 @@ test('waitConnect connect signal abort', async () => {
   const controller = new AbortController();
   try {
     socket.connect({
-      host: '192.168.100.66',
+      host: '192.168.101.66',
       port: 9998,
     });
     setTimeout(() => {
