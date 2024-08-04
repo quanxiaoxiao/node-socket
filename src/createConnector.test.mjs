@@ -27,7 +27,7 @@ const waitFor = async (t = 100) => {
   });
 };
 
-test('createConnector fail', { only: true }, () => {
+test('createConnector fail', () => {
   assert.throws(
     () => {
       createConnector(
@@ -54,7 +54,7 @@ test('createConnector fail', { only: true }, () => {
   );
 });
 
-test('createConnector unable connect', { only: true }, async () => {
+test('createConnector unable connect', async () => {
   const socket = net.Socket();
   const onError = mock.fn(() => {});
   const onClose = mock.fn(() => {});
@@ -75,7 +75,7 @@ test('createConnector unable connect', { only: true }, async () => {
   assert.equal(onConnect.mock.calls.length, 1);
 });
 
-test('createConnector unable connect remote', { only: true }, async () => {
+test('createConnector unable connect remote', async () => {
   const port = getPort();
   const socket = net.Socket();
   socket.connect({
@@ -108,7 +108,7 @@ test('createConnector unable connect remote', { only: true }, async () => {
   assert(!socket.eventNames().includes('connect'));
 });
 
-test('createConnector unable connect remote 2', { only: true }, async () => {
+test('createConnector unable connect remote 2', async () => {
   const port = getPort();
   const socket = net.Socket();
   socket.connect({
@@ -131,7 +131,7 @@ test('createConnector unable connect remote 2', { only: true }, async () => {
   assert.equal(onClose.mock.calls.length, 0);
 });
 
-test('createConnector', { only: true }, async () => {
+test('createConnector', async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn((chunk) => {
     assert.equal(chunk.toString(), '445566');
@@ -200,7 +200,7 @@ test('createConnector', { only: true }, async () => {
   server.close();
 });
 
-test('createConnector, socket already connect', { only: true }, async () => {
+test('createConnector, socket already connect', async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn((chunk) => {
     assert.equal(chunk.toString(), '777');
@@ -266,7 +266,7 @@ test('createConnector, socket already connect', { only: true }, async () => {
   server.close();
 });
 
-test('createConnector, onConnect trigger error', { only: true }, async () => {
+test('createConnector, onConnect trigger error', async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn(() => {});
   const handleCloseOnSocket = mock.fn(() => {});
@@ -329,7 +329,7 @@ test('createConnector, onConnect trigger error', { only: true }, async () => {
   server.close();
 });
 
-test('createConnector onConnect, wait delay', { only: true }, async () => {
+test('createConnector onConnect, wait delay', async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn((chunk) => {
     assert.equal(chunk.toString(), '777');
@@ -386,7 +386,7 @@ test('createConnector onConnect, wait delay', { only: true }, async () => {
   server.close();
 });
 
-test('createConnector, close before connect', { only: true }, async () => {
+test('createConnector, close before connect', async () => {
   const port = getPort();
   const handleCloseOnSocket = mock.fn(() => {});
   const server = net.createServer((socket) => {
@@ -426,7 +426,7 @@ test('createConnector, close before connect', { only: true }, async () => {
   server.close();
 });
 
-test('createConnector, stream outgoing', { only: true }, async () => { // xxx-----
+test('createConnector, stream outgoing', async () => {
   const port = getPort();
   const handleCloseOnSocket = mock.fn(() => {});
   const pathname = path.resolve(process.cwd(), `test_${Date.now()}_111`);
@@ -517,7 +517,7 @@ test('createConnector, stream outgoing', { only: true }, async () => { // xxx---
   }, 200);
 });
 
-test('createConnector, stream outgoing end with close trigger error', { only: true }, async () => { // xxx-----
+test('createConnector, stream outgoing end with close trigger error', async () => {
   const port = getPort();
   const handleCloseOnSocket = mock.fn(() => {});
   const pathname = path.resolve(process.cwd(), `test_${Date.now()}_end_close`);

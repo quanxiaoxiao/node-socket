@@ -460,7 +460,7 @@ test('pipeForward 2', () => {
       socket.end();
     }, 300);
   });
-  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_abdsf1`);
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_abdsf1_pipe`);
   const ws = fs.createWriteStream(pathname);
   const server2 = net.createServer((socket) => {
     socket.pipe(ws);
@@ -510,7 +510,7 @@ test('pipeForward 3', () => {
       socket.end();
     }, 300);
   });
-  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_abdsf8`);
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_abdsf8_pipe`);
   const ws = fs.createWriteStream(pathname);
   const server2 = net.createServer((socket) => {
     socket.pipe(ws);
