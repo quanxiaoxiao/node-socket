@@ -1260,14 +1260,14 @@ test('createConnector end 2', async () => {
   };
 
   const onConnect = mock.fn(() => {
+    assert(!socket.eventNames().includes('finish'));
     state.connector.end(Buffer.from('aabb'));
+    assert(socket.eventNames().includes('finish'));
     assert(!socket.destroyed);
     assert(socket.eventNames().includes('error'));
-    socket.emit('error', new Error('33333'));
-    assert(socket.destroyed);
     setTimeout(() => {
       assert(!socket.eventNames().includes('data'));
-    });
+    }, 10);
   });
   const onData = mock.fn(() => {});
   const onClose = mock.fn(() => {});

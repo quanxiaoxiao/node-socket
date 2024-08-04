@@ -28,6 +28,7 @@ const createConnector = (
     onData,
     onDrain,
     onClose,
+    onFinish,
     onError,
   } = options;
 
@@ -39,6 +40,7 @@ const createConnector = (
     isConnectActive: false,
     isSocketTimeoutEventBind: false,
     isSocketCloseEventBind: false,
+    isSocketFinishEventBind: false,
     isSocketDrainEventBind: false,
     isSocketErrorEventBind: false,
     isSignalEventBind: !!signal,
@@ -70,10 +72,18 @@ const createConnector = (
     }
   }
 
-  function clearSocketEvents() {
+  function unbindSocketCloseEvent() {
     if (state.isSocketCloseEventBind) {
       state.isSocketCloseEventBind = false;
       socket.off('close', handleCloseOnSocket);
+    }
+  }
+
+  function clearSocketEvents() {
+    unbindSocketCloseEvent();
+    if (state.isSocketFinishEventBind) {
+      state.isSocketFinishEventBind = false;
+      socket.off('finish', handleFinishOnSocket);
     }
 
     if (state.isSocketDataEventBind) {
@@ -128,6 +138,14 @@ const createConnector = (
   function handleDrainOnSocket() {
     if (!state.isDetach && state.isActive && onDrain) {
       onDrain();
+    }
+  }
+
+  function handleFinishOnSocket() {
+    assert(state.isActive);
+    unbindSocketCloseEvent();
+    if (onFinish) {
+      onFinish();
     }
   }
 
@@ -287,6 +305,8 @@ const createConnector = (
         bufList.push(chunk);
       }
       const buf = Buffer.concat(bufList);
+      socket.once('finish', handleFinishOnSocket);
+      state.isSocketFinishEventBind = true;
       if (buf.length > 0) {
         socket.end(buf);
       } else {
