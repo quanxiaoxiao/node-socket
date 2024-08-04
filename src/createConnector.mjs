@@ -80,7 +80,6 @@ const createConnector = (
   }
 
   function clearSocketEvents() {
-    unbindSocketCloseEvent();
     if (state.isSocketFinishEventBind) {
       state.isSocketFinishEventBind = false;
       socket.off('finish', handleFinishOnSocket);
@@ -160,6 +159,7 @@ const createConnector = (
       try {
         await onConnect();
       } catch (error) {
+        unbindSocketCloseEvent();
         clearSocketEvents();
         unbindEventSignal();
         if (!socket.destroyed) {
@@ -242,6 +242,7 @@ const createConnector = (
             socket.pause();
           }
         } catch (error) {
+          unbindSocketCloseEvent();
           clearSocketEvents();
           unbindEventSignal();
           if (!socket.destroyed) {
@@ -263,8 +264,9 @@ const createConnector = (
     if (state.isActive) {
       state.isActive = false;
     }
-    unbindEventSignal();
+    unbindSocketCloseEvent();
     clearSocketEvents();
+    unbindEventSignal();
     if (!socket.destroyed) {
       socket.destroy();
     }
@@ -337,6 +339,7 @@ const createConnector = (
       return null;
     }
     state.isDetach = true;
+    unbindSocketCloseEvent();
     clearSocketEvents();
     unbindEventSignal();
     if (timeout != null) {
