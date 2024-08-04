@@ -505,9 +505,93 @@ test('createConnector, stream outgoing', { only: true }, async () => { // xxx---
       assert(!socket.eventNames().includes('data'));
       assert(!socket.eventNames().includes('drain'));
       setTimeout(() => {
-        assert(onFinish.mock.calls.length, 1);
+        assert.equal(onFinish.mock.calls.length, 1);
         assert(!socket.eventNames().includes('close'));
         assert(!socket.eventNames().includes('finish'));
+        server.close();
+      }, 1000);
+    }
+  }
+  setTimeout(() => {
+    walk();
+  }, 200);
+});
+
+test('createConnector, stream outgoing end with close trigger error', { only: true }, async () => { // xxx-----
+  const port = getPort();
+  const handleCloseOnSocket = mock.fn(() => {});
+  const pathname = path.resolve(process.cwd(), `test_${Date.now()}_end_close`);
+  const ws = fs.createWriteStream(pathname);
+  const count = 5000;
+  const handleFinishOnWriteStream = mock.fn(() => {
+    fs.unlinkSync(pathname);
+  });
+  ws.on('finish', handleFinishOnWriteStream);
+  const server = net.createServer((socket) => {
+    socket.pipe(ws);
+    socket.on('close', handleCloseOnSocket);
+  });
+  server.listen(port);
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+  const onData = mock.fn(() => {});
+  const onFinish = mock.fn(() => {});
+
+  server.on('close', () => {
+    assert.equal(onClose.mock.calls.length, 0);
+    assert.equal(onError.mock.calls.length, 1);
+    assert.equal(onError.mock.calls[0].arguments[0].message, 'Socket close error');
+  });
+
+  let i = 0;
+  let isPause = false;
+  const onDrain = mock.fn(() => {
+    isPause = false;
+    walk();
+  });
+  const connector = createConnector(
+    {
+      onData,
+      onClose,
+      onError,
+      onDrain,
+      onFinish,
+    },
+    () => socket,
+  );
+  connector.write(Buffer.from('-- start --'));
+  const content = 'aabbccddee';
+  function walk() {
+    while (i < count && !isPause) {
+      const s = `${_.times(800).map(() => content).join('')}:${i}`;
+      const ret = connector.write(Buffer.from(s));
+      if (ret === false) {
+        isPause = true;
+      }
+      i++;
+    }
+    if (i >= count) {
+      assert(!socket.destroyed);
+      connector.end();
+      assert(socket.eventNames().includes('finish'));
+      assert.equal(onFinish.mock.calls.length, 0);
+      assert(!socket.destroyed);
+      socket.destroy();
+
+      setTimeout(() => {
+        assert(!socket.eventNames().includes('close'));
+        assert(!socket.eventNames().includes('data'));
+        assert(!socket.eventNames().includes('drain'));
+        assert(!socket.eventNames().includes('finish'));
+      });
+      setTimeout(() => {
+        assert.equal(onFinish.mock.calls.length, 0);
         server.close();
       }, 1000);
     }

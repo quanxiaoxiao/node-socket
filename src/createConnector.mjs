@@ -143,6 +143,8 @@ const createConnector = (
 
   function handleFinishOnSocket() {
     unbindSocketCloseEvent();
+    clearSocketEvents();
+    unbindEventSignal();
     if (state.isActive) {
       state.isActive = false;
       if (onFinish) {
@@ -207,7 +209,7 @@ const createConnector = (
       unbindEventSignal();
       if (state.isActive) {
         state.isActive = false;
-        emitError(new Error('socket close error'));
+        emitError(new Error('Socket close error'));
       }
     } else {
       clearSocketEvents();
@@ -305,11 +307,15 @@ const createConnector = (
 
   connector.end = (chunk) => {
     assert(state.isActive && !socket.writableEnded);
+    assert(!state.isSocketFinishEventBind);
     assert(!state.isDetach);
     if (!state.isConnect) {
       state.isActive = false;
       checkConnectSignalAbort();
       unbindEventSignal();
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
       emitError(new Error('socket not connect'));
     } else {
       clearSocketEvents();
