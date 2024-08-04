@@ -117,6 +117,7 @@ const createConnector = (
 
   function handleErrorOnSocket(error) {
     checkConnectSignalAbort();
+    unbindSocketCloseEvent();
     clearSocketEvents();
     unbindEventSignal();
 
@@ -142,10 +143,12 @@ const createConnector = (
   }
 
   function handleFinishOnSocket() {
-    assert(state.isActive);
     unbindSocketCloseEvent();
-    if (onFinish) {
-      onFinish();
+    if (state.isActive) {
+      state.isActive = false;
+      if (onFinish) {
+        onFinish();
+      }
     }
   }
 
@@ -199,18 +202,27 @@ const createConnector = (
 
   function handleCloseOnSocket() {
     state.isSocketCloseEventBind = false;
-    clearSocketEvents();
-    unbindEventSignal();
-    const buf = Buffer.concat(state.incomingBufList);
-    state.incomingBufList = [];
-    if (state.isActive) {
-      state.isActive = false;
-      try {
-        if (onClose) {
-          onClose(buf);
+    if (state.isSocketFinishEventBind) {
+      clearSocketEvents();
+      unbindEventSignal();
+      if (state.isActive) {
+        state.isActive = false;
+        emitError(new Error('socket close error'));
+      }
+    } else {
+      clearSocketEvents();
+      unbindEventSignal();
+      const buf = Buffer.concat(state.incomingBufList);
+      state.incomingBufList = [];
+      if (state.isActive) {
+        state.isActive = false;
+        try {
+          if (onClose) {
+            onClose(buf);
+          }
+        } catch (error) {
+          emitError(error);
         }
-      } catch (error) {
-        emitError(error);
       }
     }
   }
@@ -277,6 +289,7 @@ const createConnector = (
 
   connector.write = (chunk) => {
     assert(state.isActive && !socket.writableEnded);
+    assert(!state.isSocketFinishEventBind);
     assert(!state.isDetach);
     if (!state.isConnectActive) {
       state.outgoingBufList.push(chunk);
