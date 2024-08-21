@@ -85,7 +85,9 @@ export default (
       onClose: () => {
         assert(!controller.signal.aborted);
         if (!isPipe()) {
-          throw new Error('Pipe connect fail, source socket is close, but dest socket is not connect');
+          const error = new Error('Pipe connect fail, source socket is close, but dest socket is not connect');
+          error.code = 'ERR_SOCKET_PIPE_SOURCE_CLOSE';
+          throw error;
         }
         state.dest.end();
         if (onClose) {
@@ -133,7 +135,9 @@ export default (
       onClose: () => {
         assert(!controller.signal.aborted);
         if (!isPipe()) {
-          throw new Error('Pipe connect fail, dest socket is close, but souce socket is not connect');
+          const error = new Error('Pipe connect fail, dest socket is close, but souce socket is not connect');
+          error.code = 'ERR_SOCKET_PIPE_DEST_CLOSE';
+          throw new Error(error);
         }
         state.source.end();
         if (onClose) {
@@ -165,7 +169,9 @@ export default (
     if (!controller.signal.aborted && !isPipe()) {
       controller.abort();
       if (onError) {
-        onError(new Error('Connect Pipe fail'), getState());
+        const error = new Error('Connect Pipe fail');
+        error.code = 'ERR_SOCKET_PIPE_TIMEOUT';
+        onError(error, getState());
       }
     }
   }, 1000 * 15);

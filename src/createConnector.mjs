@@ -209,7 +209,9 @@ const createConnector = (
       unbindEventSignal();
       if (state.isActive) {
         state.isActive = false;
-        emitError(new Error('Socket close error'));
+        const error = new Error('Socket close error');
+        error.code = 'ERR_SOCKET_CLOSE';
+        emitError(error);
       }
     } else {
       clearSocketEvents();

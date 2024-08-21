@@ -65,7 +65,7 @@ test('waitConnect connect timeout', async () => {
     await waitConnect(socket, timeout);
     throw new Error('xxxx');
   } catch (error) {
-    assert.equal(error.message, 'timeout');
+    assert.equal(error.code, 'ERR_SOCKET_CONNECTION_TIMEOUT');
     const diff = Date.now() - now;
     assert(diff >= timeout && diff < timeout + 100);
     assert(socket.destroyed);
@@ -92,7 +92,7 @@ test('waitConnect connect signal abort', async () => {
     await waitConnect(socket, timeout, controller.signal);
     throw new Error('xxxx');
   } catch (error) {
-    assert.equal(error.message, 'abort');
+    assert.equal(error.code, 'ABORT_ERR');
     const diff = Date.now() - now;
     assert(diff >= 100 && diff < 200);
     assert(socket.destroyed);

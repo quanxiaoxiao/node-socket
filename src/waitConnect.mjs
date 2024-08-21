@@ -82,7 +82,9 @@ export default (
       clearEvents();
       if (!state.complete) {
         state.complete = true;
-        reject(new Error('abort'));
+        const error = new Error('abort');
+        error.code = 'ABORT_ERR';
+        reject(error);
       }
       if (!socket.destroyed) {
         socket.destroy();
@@ -103,7 +105,9 @@ export default (
         clearEvents();
         if (!state.complete) {
           state.complete = true;
-          reject(new Error('timeout'));
+          const error = new Error('socket connection timeout');
+          error.code = 'ERR_SOCKET_CONNECTION_TIMEOUT';
+          reject(error);
         }
         if (!socket.destroyed) {
           socket.destroy();
