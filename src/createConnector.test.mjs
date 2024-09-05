@@ -1047,7 +1047,8 @@ test('createConnector signal', async () => {
 
   assert.equal(onConnect.mock.calls.length, 0);
   assert.equal(onClose.mock.calls.length, 0);
-  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onError.mock.calls[0].arguments[0].code, 'ABORT_ERR');
 
   server.close();
 });
@@ -1709,7 +1710,8 @@ test('createConnector, stream with outgoing abort', () => {
     setTimeout(() => {
       server.close();
       fs.unlinkSync(pathname);
-      assert.equal(onError.mock.calls.length, 0);
+      assert.equal(onError.mock.calls.length, 1);
+      assert.equal(onError.mock.calls[0].arguments[0].code, 'ABORT_ERR');
       assert.equal(onClose.mock.calls.length, 0);
       assert(socket.destroyed);
     }, 100);
@@ -1784,7 +1786,8 @@ test('createConnector stream with incoming abort', () => {
     setTimeout(() => {
       server.close();
       fs.unlinkSync(pathname);
-      assert.equal(onError.mock.calls.length, 0);
+      assert.equal(onError.mock.calls.length, 1);
+      assert.equal(onError.mock.calls[0].arguments[0].code, 'ABORT_ERR');
       assert.equal(onClose.mock.calls.length, 0);
     }, 100);
   });
@@ -1798,6 +1801,47 @@ test('createConnector stream with incoming abort', () => {
     () => socket,
     controller.signal,
   );
+});
+
+test('createConnector signal abort at connect immediate', async () => {
+  const port = getPort();
+  const handleDataOnSocket = mock.fn(() => {});
+
+  const server = net.createServer((socket) => {
+    socket.on('data', handleDataOnSocket);
+  });
+  server.listen(port);
+  const controller = new AbortController();
+
+  const socket = net.Socket();
+  socket.connect({
+    host: '127.0.0.1',
+    port,
+  });
+
+  const onClose = mock.fn(() => {});
+  const onError = mock.fn(() => {});
+
+  const connector = createConnector(
+    {
+      onConnect: () => {
+        connector.write(Buffer.from('aaabbb'));
+        controller.abort();
+      },
+      onClose,
+      onError,
+    },
+    () => socket,
+    controller.signal,
+  );
+
+  await waitFor(500);
+  server.close();
+  assert(controller.signal.aborted);
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onError.mock.calls[0].arguments[0].code, 'ABORT_ERR');
+  assert.equal(handleDataOnSocket.mock.calls.length, 0);
 });
 
 test('createConnector end signal abort', async () => {
@@ -1885,7 +1929,8 @@ test('createConnector signal abort 1', () => {
       clearInterval(tick);
       setTimeout(() => {
         assert.equal(onClose.mock.calls.length, 0);
-        assert.equal(onError.mock.calls.length, 0);
+        assert.equal(onError.mock.calls.length, 1);
+        assert.equal(onError.mock.calls[0].arguments[0].code, 'ABORT_ERR');
         server.close();
       }, 100);
     }
@@ -1895,7 +1940,7 @@ test('createConnector signal abort 1', () => {
   }, 2000);
 });
 
-test('createConnector signal abort 2', () => {
+test('createConnector signal abort 2', async () => {
   const port = getPort();
 
   const server = net.createServer((socket) => {
@@ -1938,15 +1983,15 @@ test('createConnector signal abort 2', () => {
   setTimeout(() => {
     controller.abort();
   }, 2000);
-  setTimeout(() => {
-    assert(!aborted);
-    assert(socket.destroyed);
-    assert(!socket.eventNames().includes('data'));
-    assert.equal(onClose.mock.calls.length, 0);
-    assert.equal(onError.mock.calls.length, 0);
-    assert(onData.mock.calls.length > 0);
-    server.close();
-  }, 2500);
+  await waitFor(3000);
+  assert(!aborted);
+  assert(socket.destroyed);
+  assert(!socket.eventNames().includes('data'));
+  assert.equal(onClose.mock.calls.length, 0);
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onError.mock.calls[0].arguments[0].code, 'ABORT_ERR');
+  assert(onData.mock.calls.length > 0);
+  server.close();
 });
 
 test('createConnector read epipe', async () => {
@@ -2003,7 +2048,8 @@ test('createConnector read epipe', async () => {
   );
   await waitFor(1000);
   assert.equal(onConnect.mock.calls.length, 1);
-  assert.equal(onError.mock.calls.length, 0);
+  assert.equal(onError.mock.calls.length, 1);
+  assert.equal(onError.mock.calls[0].arguments[0].code, 'ABORT_ERR');
   assert.equal(onClose.mock.calls.length, 0);
   assert(controller.signal.aborted);
 });

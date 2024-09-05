@@ -131,7 +131,6 @@ const createConnector = (
       if (!socket.destroyed) {
         socket.destroy();
       }
-      removeEventSocketError();
     });
   }
 
@@ -264,10 +263,10 @@ const createConnector = (
   }
 
   function connector() {
-    checkConnectSignalAbort();
     if (state.isActive) {
       state.isActive = false;
     }
+    checkConnectSignalAbort();
     unbindSocketCloseEvent();
     clearSocketEvents();
     unbindEventSignal();
@@ -279,6 +278,14 @@ const createConnector = (
 
   function handleAbortOnSignal() {
     state.isSignalEventBind = false;
+    if (state.isActive) {
+      state.isActive = false;
+      if (!state.isDetach) {
+        const error = new Error('abort');
+        error.code = 'ABORT_ERR';
+        emitError(error);
+      }
+    }
     connector();
   }
 
