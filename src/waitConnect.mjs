@@ -50,7 +50,6 @@ export default (
 
     function clearEvents() {
       removeTimeTick();
-      removeEventSocketError();
       if (state.isEventConnectBind) {
         state.isEventConnectBind = false;
         socket.off('connect', handleConnectOnSocket);
@@ -66,6 +65,7 @@ export default (
       clearEvents();
       if (!state.complete) {
         state.complete = true;
+        removeEventSocketError();
         resolve();
       }
     };

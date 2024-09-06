@@ -273,7 +273,6 @@ const createConnector = (
     if (!socket.destroyed) {
       socket.destroy();
     }
-    removeEventSocketError();
   }
 
   function handleAbortOnSignal() {

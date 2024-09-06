@@ -50,7 +50,7 @@ test('waitConnect 1', async () => {
     assert(!!error.message.match(/ECONNREFUSED/));
   }
   await waitFor(200);
-  assert(!socket.eventNames().includes('error'));
+  assert(socket.eventNames().includes('error'));
 });
 
 test('waitConnect connect timeout', async () => {
@@ -73,7 +73,7 @@ test('waitConnect connect timeout', async () => {
     assert(!socket.eventNames().includes('connect'));
   }
   await waitFor(200);
-  assert(!socket.eventNames().includes('error'));
+  assert(socket.eventNames().includes('error'));
 });
 
 test('waitConnect connect signal abort', async () => {
@@ -100,7 +100,7 @@ test('waitConnect connect signal abort', async () => {
     assert(!socket.eventNames().includes('connect'));
   }
   await waitFor(200);
-  assert(!socket.eventNames().includes('error'));
+  assert(socket.eventNames().includes('error'));
 });
 
 test('waitConnect 111', async () => {
