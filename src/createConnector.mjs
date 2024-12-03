@@ -30,6 +30,8 @@ const createConnector = (
     onClose,
     onFinish,
     onError,
+    keepAlive = true,
+    keepAliveInitialDelay = 1000 * 60,
   } = options;
 
   const state = {
@@ -367,8 +369,14 @@ const createConnector = (
     state.isConnect = true;
     state.isSocketErrorEventBind = true;
     state.isSocketCloseEventBind = true;
-    socket.on('error', handleErrorOnSocket);
-    socket.once('close', handleCloseOnSocket);
+    socket
+      .on('error', handleErrorOnSocket)
+      .once('close', handleCloseOnSocket);
+
+    if (keepAlive && socket.setKeepAlive) {
+      socket.setKeepAlive(true, keepAliveInitialDelay);
+    }
+
     process.nextTick(() => {
       if (!state.isDetach && state.isActive) {
         handleConnectOnSocket();
@@ -380,8 +388,10 @@ const createConnector = (
     waitConnect(socket, 1000 * 10, controller.signal)
       .then(
         () => {
-          assert(state.isActive && !state.isDetach);
-          doConnect();
+          assert(state.isActive);
+          if (!state.isDetach) {
+            doConnect();
+          }
         },
         (error) => {
           unbindEventSignal();

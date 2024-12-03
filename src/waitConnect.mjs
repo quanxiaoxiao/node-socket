@@ -1,4 +1,10 @@
 import assert from 'node:assert';
+import { waitTick } from '@quanxiaoxiao/utils';
+
+const checkSocketEnable = (socket) => {
+  assert(!socket.destroyed);
+  assert(socket.readyState === 'opening');
+};
 
 export default (
   socket,
@@ -8,29 +14,29 @@ export default (
   if (signal) {
     assert(!signal.aborted);
   }
-  assert(!socket.destroyed);
-  assert(socket.readyState === 'opening');
-
-  if (timeout != null && timeout !== 0) {
-    assert(timeout >= 50);
-  }
+  checkSocketEnable(socket);
 
   return new Promise((resolve, reject) => {
     const state = {
       complete: false,
-      tick: null,
       tickWithError: null,
       isSignalEventBind: false,
       isEventErrorBind: true,
       isEventConnectBind: true,
     };
 
-    function removeTimeTick() {
-      if (state.tick != null) {
-        clearTimeout(state.tick);
-        state.tick = null;
+    const tickWait = waitTick(timeout, () => {
+      clearEvents();
+      if (!state.complete) {
+        state.complete = true;
+        const error = new Error('socket connection timeout');
+        error.code = 'ERR_SOCKET_CONNECTION_TIMEOUT';
+        reject(error);
       }
-    }
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+    });
 
     function removeEventSocketError() {
       if (state.tickWithError) {
@@ -49,7 +55,6 @@ export default (
     }
 
     function clearEvents() {
-      removeTimeTick();
       if (state.isEventConnectBind) {
         state.isEventConnectBind = false;
         socket.off('connect', handleConnectOnSocket);
@@ -62,6 +67,7 @@ export default (
 
     function handleConnectOnSocket() {
       state.isEventConnectBind = false;
+      tickWait();
       clearEvents();
       if (!state.complete) {
         state.complete = true;
@@ -72,6 +78,7 @@ export default (
 
     function handleErrorOnSocket(error) {
       clearEvents();
+      tickWait();
       if (!state.complete) {
         state.complete = true;
         reject(error);
@@ -80,6 +87,7 @@ export default (
 
     function handleAbortOnSignal() {
       clearEvents();
+      tickWait();
       if (!state.complete) {
         state.complete = true;
         const error = new Error('abort');
@@ -91,28 +99,14 @@ export default (
       }
     }
 
-    socket.on('error', handleErrorOnSocket);
-    socket.once('connect', handleConnectOnSocket);
+    socket
+      .setNoDelay(true)
+      .once('connect', handleConnectOnSocket)
+      .on('error', handleErrorOnSocket);
 
-    if (signal && !state.complete) {
+    if (!state.complete && signal) {
       state.isSignalEventBind = true;
       signal.addEventListener('abort', handleAbortOnSignal, { once: true });
-    }
-
-    if (timeout && !state.complete) {
-      state.tick = setTimeout(() => {
-        state.tick = null;
-        clearEvents();
-        if (!state.complete) {
-          state.complete = true;
-          const error = new Error('socket connection timeout');
-          error.code = 'ERR_SOCKET_CONNECTION_TIMEOUT';
-          reject(error);
-        }
-        if (!socket.destroyed) {
-          socket.destroy();
-        }
-      }, timeout);
     }
   });
 };
