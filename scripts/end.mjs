@@ -1,5 +1,7 @@
 import net from 'node:net';
+
 import _ from 'lodash';
+
 import createConnector from '../src/createConnector.mjs';
 
 const port = 5257;

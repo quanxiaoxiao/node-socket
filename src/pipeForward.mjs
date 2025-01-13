@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+
 import createConnector from './createConnector.mjs';
 
 export default (
@@ -22,12 +23,12 @@ export default (
   const controller = new AbortController();
 
   const state = {
-    'tick': null,
-    'source': null,
-    'dest': null,
-    'timeStart': performance.now(),
-    'timeConnectOnSource': null,
-    'timeConnectOnDest': null,
+    tick: null,
+    source: null,
+    dest: null,
+    timeStart: performance.now(),
+    timeConnectOnSource: null,
+    timeConnectOnDest: null,
   };
 
   const isPipe = () => {
@@ -49,9 +50,9 @@ export default (
   const getState = () => {
 
     const result = {
-      'timeConnectOnSource': null,
-      'timeConnectOnDest': null,
-      'timeConnect': null,
+      timeConnectOnSource: null,
+      timeConnectOnDest: null,
+      timeConnect: null,
     };
     if (state.timeConnectOnSource != null) {
 
@@ -75,7 +76,7 @@ export default (
   state.source = createConnector(
     {
       timeout,
-      'onConnect': async () => {
+      onConnect: async () => {
 
         assert(!controller.signal.aborted);
         state.timeConnectOnSource = performance.now();
@@ -96,7 +97,7 @@ export default (
         }
 
       },
-      'onData': (chunk) => {
+      onData: (chunk) => {
 
         if (onOutgoing) {
 
@@ -106,12 +107,12 @@ export default (
         return state.dest.write(chunk);
 
       },
-      'onDrain': () => {
+      onDrain: () => {
 
         state.dest.resume();
 
       },
-      'onClose': () => {
+      onClose: () => {
 
         assert(!controller.signal.aborted);
         if (!isPipe()) {
@@ -129,7 +130,7 @@ export default (
         }
 
       },
-      'onError': (error) => {
+      onError: (error) => {
 
         if (!controller.signal.aborted) {
 
@@ -151,7 +152,7 @@ export default (
   state.dest = createConnector(
     {
       timeout,
-      'onConnect': async () => {
+      onConnect: async () => {
 
         assert(!controller.signal.aborted);
         state.timeConnectOnDest = performance.now();
@@ -172,7 +173,7 @@ export default (
         }
 
       },
-      'onData': (chunk) => {
+      onData: (chunk) => {
 
         if (onIncoming) {
 
@@ -182,12 +183,12 @@ export default (
         return state.source.write(chunk);
 
       },
-      'onDrain': () => {
+      onDrain: () => {
 
         state.source.resume();
 
       },
-      'onClose': () => {
+      onClose: () => {
 
         assert(!controller.signal.aborted);
         if (!isPipe()) {
@@ -205,7 +206,7 @@ export default (
         }
 
       },
-      'onError': (error) => {
+      onError: (error) => {
 
         if (!controller.signal.aborted) {
 
@@ -233,7 +234,7 @@ export default (
 
     }
 
-  }, {'once': true});
+  }, { once: true });
 
   state.tick = setTimeout(() => {
 

@@ -1,11 +1,13 @@
 /* eslint no-use-before-define: 0 */
 import assert from 'node:assert';
-import net from 'node:net';
 import fs from 'node:fs';
-import {PassThrough} from 'node:stream';
+import net from 'node:net';
 import path from 'node:path';
+import { PassThrough } from 'node:stream';
+import { mock,test } from 'node:test';
+
 import _ from 'lodash';
-import {test, mock} from 'node:test';
+
 import createConnector from './createConnector.mjs';
 
 const _getPort = () => {
@@ -100,7 +102,7 @@ test('createConnector unable connect remote', async () => {
   const port = getPort();
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
   const onConnect = mock.fn(() => {});
@@ -137,7 +139,7 @@ test('createConnector unable connect remote 2', async () => {
   const port = getPort();
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
   const onConnect = mock.fn(() => {});
@@ -184,7 +186,7 @@ test('createConnector', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -271,7 +273,7 @@ test('createConnector, socket already connect', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -347,7 +349,7 @@ test('createConnector, onConnect trigger error', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -419,7 +421,7 @@ test('createConnector onConnect, wait delay', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -485,7 +487,7 @@ test('createConnector, close before connect', async () => {
   const onData = mock.fn(() => {});
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
   const connector = createConnector(
@@ -539,7 +541,7 @@ test('createConnector, stream outgoing', async () => {
   server.listen(port);
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -647,7 +649,7 @@ test('createConnector, stream outgoing end with close trigger error', async () =
   server.listen(port);
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -761,7 +763,7 @@ test('createConnector, stream outgoing 2', async () => {
   server.listen(port);
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -895,12 +897,12 @@ test('createConnector stream incoming', () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onDrain = mock.fn(() => {
@@ -931,7 +933,7 @@ test('createConnector stream incoming', () => {
 
   state.connector = createConnector(
     {
-      'onData': (chunk) => {
+      onData: (chunk) => {
 
         if (i >= count) {
 
@@ -1009,12 +1011,12 @@ test('createConnector stream incoming 2', () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onDrain = mock.fn(() => {
@@ -1050,7 +1052,7 @@ test('createConnector stream incoming 2', () => {
 
   state.connector = createConnector(
     {
-      'onData': (chunk) => {
+      onData: (chunk) => {
 
         const ret = ws.write(chunk);
         if (ret === false) {
@@ -1123,12 +1125,12 @@ test('createConnector stream incoming 3', () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onDrain = mock.fn(() => {
@@ -1173,7 +1175,7 @@ test('createConnector stream incoming 3', () => {
 
   state.connector = createConnector(
     {
-      'onData': (chunk) => {
+      onData: (chunk) => {
 
         assert(!ws.writableEnded);
         return ws.write(chunk);
@@ -1214,7 +1216,7 @@ test('createConnector onData trigger error', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -1275,7 +1277,7 @@ test('createConnector signal', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -1333,7 +1335,7 @@ test('createConnector timeout', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -1360,11 +1362,11 @@ test('createConnector timeout', async () => {
 
   createConnector(
     {
-      'onData': () => {},
+      onData: () => {},
       onClose,
       onConnect,
       onError,
-      'timeout': 1000 * 2,
+      timeout: 1000 * 2,
     },
     () => socket,
   );
@@ -1391,7 +1393,7 @@ test('createConnector timeout 2', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -1416,7 +1418,7 @@ test('createConnector timeout 2', async () => {
       onData,
       onClose,
       onError,
-      'timeout': 1000 * 2,
+      timeout: 1000 * 2,
     },
     () => socket,
   );
@@ -1439,7 +1441,7 @@ test('createConnector socket emit error', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -1503,7 +1505,7 @@ test('createConnector socket emit error 2', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -1558,7 +1560,7 @@ test('createConnector end before connect', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -1612,12 +1614,12 @@ test('createConnector end', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onConnect = mock.fn(() => {
@@ -1663,12 +1665,12 @@ test('createConnector end 2', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onConnect = mock.fn(() => {
@@ -1725,12 +1727,12 @@ test('createConnector end 3', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onConnect = mock.fn(() => {
@@ -1785,14 +1787,14 @@ test('createConnector open resume', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   await waitFor(100);
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onConnect = mock.fn(() => {
@@ -1819,7 +1821,7 @@ test('createConnector open resume', async () => {
       onConnect,
       onClose,
       onError,
-      'timeout': 1000 * 20,
+      timeout: 1000 * 20,
     },
     () => socket,
     controller.signal,
@@ -1852,14 +1854,14 @@ test('createConnector end after write', async () => {
   const socket = net.Socket();
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   await waitFor(100);
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onConnect = mock.fn(() => {
@@ -1950,7 +1952,7 @@ test('createConnector onClose', async () => {
   );
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
   await waitFor(500);
@@ -2006,7 +2008,7 @@ test('createConnector onClose 2', async () => {
   );
 
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
   await waitFor(500);
@@ -2035,7 +2037,7 @@ test('createConnector, stream with outgoing abort', () => {
   server.listen(port);
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -2174,12 +2176,12 @@ test('createConnector stream with incoming abort', () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
   const state = {
-    'connector': null,
+    connector: null,
   };
 
   const onError = mock.fn(() => {});
@@ -2226,7 +2228,7 @@ test('createConnector stream with incoming abort', () => {
 
   state.connector = createConnector(
     {
-      'onData': (chunk) => ws.write(chunk),
+      onData: (chunk) => ws.write(chunk),
       onError,
       onClose,
     },
@@ -2251,7 +2253,7 @@ test('createConnector signal abort at connect immediate', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -2260,7 +2262,7 @@ test('createConnector signal abort at connect immediate', async () => {
 
   const connector = createConnector(
     {
-      'onConnect': () => {
+      onConnect: () => {
 
         connector.write(Buffer.from('aaabbb'));
         controller.abort();
@@ -2298,7 +2300,7 @@ test('createConnector end signal abort', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -2308,7 +2310,7 @@ test('createConnector end signal abort', async () => {
 
   const connector = createConnector(
     {
-      'onConnect': () => {
+      onConnect: () => {
 
         connector.end(Buffer.from(s));
         controller.abort();
@@ -2348,7 +2350,7 @@ test('createConnector signal abort 1', () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -2428,7 +2430,7 @@ test('createConnector signal abort 2', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -2508,7 +2510,7 @@ test('createConnector read epipe', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -2563,7 +2565,7 @@ test('createConnector onClose trigger error', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -2605,7 +2607,7 @@ test('createConnector detach', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 
@@ -2658,7 +2660,7 @@ test('createConnector detach 3', async () => {
 
   const socket = net.Socket();
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
 

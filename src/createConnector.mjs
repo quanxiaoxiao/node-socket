@@ -1,6 +1,7 @@
 import assert from 'node:assert';
-import {Buffer} from 'node:buffer';
+import { Buffer } from 'node:buffer';
 import process from 'node:process';
+
 import waitConnect from './waitConnect.mjs';
 
 const createConnector = (
@@ -38,20 +39,20 @@ const createConnector = (
   } = options;
 
   const state = {
-    'isActive': true,
-    'isConnect': false,
-    'isDetach': false,
-    'isSocketDataEventBind': false,
-    'isConnectActive': false,
-    'isSocketTimeoutEventBind': false,
-    'isSocketCloseEventBind': false,
-    'isSocketFinishEventBind': false,
-    'isSocketDrainEventBind': false,
-    'isSocketErrorEventBind': false,
-    'isSignalEventBind': !!signal,
-    'outgoingBufList': [],
-    'incomingBufList': [],
-    'tickWithError': null,
+    isActive: true,
+    isConnect: false,
+    isDetach: false,
+    isSocketDataEventBind: false,
+    isConnectActive: false,
+    isSocketTimeoutEventBind: false,
+    isSocketCloseEventBind: false,
+    isSocketFinishEventBind: false,
+    isSocketDrainEventBind: false,
+    isSocketErrorEventBind: false,
+    isSignalEventBind: !!signal,
+    outgoingBufList: [],
+    incomingBufList: [],
+    tickWithError: null,
   };
 
   function removeEventSocketError() {
@@ -619,7 +620,7 @@ const createConnector = (
   if (signal) {
 
     state.isSignalEventBind = true;
-    signal.addEventListener('abort', handleAbortOnSignal, {'once': true});
+    signal.addEventListener('abort', handleAbortOnSignal, { once: true });
 
   }
 

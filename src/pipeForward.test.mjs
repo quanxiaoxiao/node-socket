@@ -1,9 +1,11 @@
-import {test, mock} from 'node:test';
-import net from 'node:net';
 import assert from 'node:assert';
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
+import { mock,test } from 'node:test';
+
 import _ from 'lodash';
+
 import pipeForward from './pipeForward.mjs';
 
 const _getPort = () => {
@@ -27,7 +29,7 @@ const createSockert = (port) => {
   if (port != null) {
 
     socket.connect({
-      'host': '127.0.0.1',
+      host: '127.0.0.1',
       port,
     });
 

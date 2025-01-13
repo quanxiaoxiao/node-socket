@@ -1,10 +1,12 @@
 /* eslint no-use-before-define: 0 */
 /* eslint no-loop-func: 0 */
-import net from 'node:net';
 import assert from 'node:assert';
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
+
 import _ from 'lodash';
+
 import createConnector from '../src/createConnector.mjs';
 
 const port = 5256;

@@ -1,5 +1,6 @@
 import assert from 'node:assert';
-import {waitTick} from '@quanxiaoxiao/utils';
+
+import { waitTick } from '@quanxiaoxiao/utils';
 
 const checkSocketEnable = (socket) => {
 
@@ -13,22 +14,19 @@ export default (
   timeout = 1000 * 10,
   signal,
 ) => {
-
   if (signal) {
-
     assert(!signal.aborted);
-
   }
   checkSocketEnable(socket);
 
   return new Promise((resolve, reject) => {
 
     const state = {
-      'complete': false,
-      'tickWithError': null,
-      'isSignalEventBind': false,
-      'isEventErrorBind': true,
-      'isEventConnectBind': true,
+      complete: false,
+      tickWithError: null,
+      isSignalEventBind: false,
+      isEventErrorBind: true,
+      isEventConnectBind: true,
     };
 
     const tickWait = waitTick(timeout, () => {
@@ -65,7 +63,6 @@ export default (
 
           state.tickWithError = null;
           if (state.isEventErrorBind) {
-
             state.isEventErrorBind = false;
             // eslint-disable-next-line no-use-before-define
             socket.off('error', handleErrorOnSocket);
@@ -117,10 +114,8 @@ export default (
       clearEvents();
       tickWait();
       if (!state.complete) {
-
         state.complete = true;
         reject(error);
-
       }
 
     };
@@ -130,17 +125,13 @@ export default (
       clearEvents();
       tickWait();
       if (!state.complete) {
-
         state.complete = true;
         const error = new Error('abort');
         error.code = 'ABORT_ERR';
         reject(error);
-
       }
       if (!socket.destroyed) {
-
         socket.destroy();
-
       }
 
     }
@@ -151,12 +142,9 @@ export default (
       .on('error', handleErrorOnSocket);
 
     if (!state.complete && signal) {
-
       state.isSignalEventBind = true;
-      signal.addEventListener('abort', handleAbortOnSignal, {'once': true});
-
+      signal.addEventListener('abort', handleAbortOnSignal, { once: true });
     }
-
   });
 
 };

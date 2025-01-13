@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import net from 'node:net';
-import {test} from 'node:test';
+import { test } from 'node:test';
+
 import waitConnect from './waitConnect.mjs';
 
 const _getPort = () => {
@@ -56,8 +57,8 @@ test('waitConnect 1', async () => {
   try {
 
     socket.connect({
-      'host': '127.0.0.1',
-      'port': 9998,
+      host: '127.0.0.1',
+      port: 9998,
     });
     await waitConnect(socket);
     throw new Error('xxxx');
@@ -83,8 +84,8 @@ test('waitConnect connect timeout', async () => {
   try {
 
     socket.connect({
-      'host': '192.168.101.66',
-      'port': 9998,
+      host: '192.168.101.66',
+      port: 9998,
     });
     await waitConnect(socket, timeout);
     throw new Error('xxxx');
@@ -113,8 +114,8 @@ test('waitConnect connect signal abort', async () => {
   try {
 
     socket.connect({
-      'host': '192.168.101.66',
-      'port': 9998,
+      host: '192.168.101.66',
+      port: 9998,
     });
     setTimeout(() => {
 
@@ -148,7 +149,7 @@ test('waitConnect 111', async () => {
   const socket = net.Socket();
   await waitFor(100);
   socket.connect({
-    'host': '127.0.0.1',
+    host: '127.0.0.1',
     port,
   });
   assert.equal(socket.readyState, 'opening');
