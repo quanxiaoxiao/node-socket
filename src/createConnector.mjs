@@ -9,13 +9,10 @@ const createConnector = (
   getConnect,
   signal,
 ) => {
-
   assert(typeof getConnect === 'function');
 
   if (signal) {
-
     assert(!signal.aborted);
-
   }
 
   const controller = new AbortController();
@@ -549,7 +546,6 @@ const createConnector = (
   };
 
   function doConnect() {
-
     state.isConnect = true;
     state.isSocketErrorEventBind = true;
     state.isSocketCloseEventBind = true;
@@ -558,74 +554,48 @@ const createConnector = (
       .once('close', handleCloseOnSocket);
 
     if (keepAlive && socket.setKeepAlive) {
-
       socket.setKeepAlive(true, keepAliveInitialDelay);
-
     }
 
     process.nextTick(() => {
-
       if (!state.isDetach && state.isActive) {
-
         handleConnectOnSocket();
-
       }
-
     });
-
   }
 
   if (socket.readyState === 'opening') {
-
     waitConnect(socket, 1000 * 10, controller.signal)
       .then(
         () => {
-
           assert(state.isActive);
           if (!state.isDetach) {
-
             doConnect();
-
           }
-
         },
         (error) => {
-
           unbindEventSignal();
           if (!socket.destroyed) {
-
             socket.destroy();
-
           }
           if (state.isActive) {
-
             state.isActive = false;
             if (!controller.signal.aborted) {
-
               emitError(error);
-
             }
-
           }
-
         },
       );
 
   } else {
-
     doConnect();
-
   }
 
   if (signal) {
-
     state.isSignalEventBind = true;
     signal.addEventListener('abort', handleAbortOnSignal, { once: true });
-
   }
-
   return connector;
-
 };
 
 export default createConnector;
