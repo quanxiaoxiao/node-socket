@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import tls from 'node:tls';
 
 import { waitTick } from '@quanxiaoxiao/utils';
 
@@ -32,10 +33,9 @@ export default (
       isEventConnectBind: true,
     };
 
-    let tickWait = () => {};
-
-    if (timeout != null) {
-      tickWait = waitTick(timeout, () => {
+    const tickWait = timeout == null
+      ? () => {}
+      : waitTick(timeout, () => {
         // eslint-disable-next-line no-use-before-define
         clearEvents();
         if (!state.complete) {
@@ -46,7 +46,6 @@ export default (
           socket.destroy();
         }
       });
-    }
 
     function removeEventSocketError() {
       if (state.tickWithError) {
@@ -68,8 +67,13 @@ export default (
     function clearEvents() {
       if (state.isEventConnectBind) {
         state.isEventConnectBind = false;
-        // eslint-disable-next-line no-use-before-define
-        socket.off('connect', handleConnectOnSocket);
+        if (socket instanceof tls.TLSSocket) {
+          // eslint-disable-next-line no-use-before-define
+          socket.once('secureConnect', handleConnectOnSocket);
+        } else {
+          // eslint-disable-next-line no-use-before-define
+          socket.off('connect', handleConnectOnSocket);
+        }
       }
       if (state.isSignalEventBind) {
         state.isSignalEventBind = false;
@@ -110,10 +114,14 @@ export default (
       }
     }
 
-    socket
-      .setNoDelay(true)
-      .once('connect', handleConnectOnSocket)
+    socket.setNoDelay(true)
       .on('error', handleErrorOnSocket);
+
+    if (socket instanceof tls.TLSSocket) {
+      socket.once('secureConnect', handleConnectOnSocket);
+    } else {
+      socket.once('connect', handleConnectOnSocket);
+    }
 
     if (!state.complete && signal) {
       state.isSignalEventBind = true;
