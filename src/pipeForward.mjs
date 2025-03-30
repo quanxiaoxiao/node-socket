@@ -81,6 +81,9 @@ export default (
         if (onOutgoing) {
           onOutgoing(chunk);
         }
+        if (state.dest.socket.writableEnded) {
+          return false;
+        }
         return state.dest.write(chunk);
       },
       onDrain: () => {
@@ -135,6 +138,9 @@ export default (
       onData: (chunk) => {
         if (onIncoming) {
           onIncoming(chunk);
+        }
+        if (state.source.socket.writableEnded) {
+          return false;
         }
         return state.source.write(chunk);
       },
