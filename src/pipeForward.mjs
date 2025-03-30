@@ -27,6 +27,7 @@ export default (
     tick: null,
     source: null,
     dest: null,
+    isCloseEmit: false,
     performanceNow: performance.now(),
     timeConnectOnSource: null,
     timeConnectOnDest: null,
@@ -92,8 +93,11 @@ export default (
           error.code = 'ERR_SOCKET_PIPE_SOURCE_CLOSE';
           throw error;
         }
-        state.dest.end();
-        if (onClose) {
+        if (!state.dest.socket.writableEnded) {
+          state.dest.end();
+        }
+        if (!state.isCloseEmit && onClose) {
+          state.isCloseEmit = true;
           onClose(getState());
         }
       },
@@ -146,8 +150,11 @@ export default (
           throw new Error(error);
         }
 
-        state.source.end();
-        if (onClose) {
+        if (!state.source.socket.writableEnded) {
+          state.source.end();
+        }
+        if (!state.isCloseEmit && onClose) {
+          state.isCloseEmit = true;
           onClose(getState());
         }
       },

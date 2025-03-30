@@ -427,6 +427,9 @@ const createConnector = (
     state.isSignalEventBind = true;
     signal.addEventListener('abort', handleAbortOnSignal, { once: true });
   }
+
+  connector.socket = socket;
+
   return connector;
 };
 
