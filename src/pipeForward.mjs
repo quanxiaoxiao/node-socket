@@ -84,7 +84,11 @@ export default (
         if (state.dest.socket.writableEnded) {
           return false;
         }
-        return state.dest.write(chunk);
+        const ret = state.dest.write(chunk);
+        if (!isPipe()) {
+          return false;
+        }
+        return ret;
       },
       onDrain: () => {
         state.dest.resume();
@@ -122,7 +126,6 @@ export default (
     {
       ...other,
       onConnect: async () => {
-
         assert(!controller.signal.aborted);
         state.timeConnectOnDest = performance.now();
         if (isPipe()) {
@@ -142,7 +145,11 @@ export default (
         if (state.source.socket.writableEnded) {
           return false;
         }
-        return state.source.write(chunk);
+        const ret = state.source.write(chunk);
+        if (!isPipe()) {
+          return false;
+        }
+        return ret;
       },
       onDrain: () => {
         state.source.resume();
