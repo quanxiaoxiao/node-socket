@@ -33,18 +33,23 @@ export default (
       isEventConnectBind: true,
     };
 
+    const complete = (fn) => {
+      if (isCompleted) return;
+      isCompleted = true;
+      // eslint-disable-next-line no-use-before-define
+      clearEvents();
+      fn();
+    };
+
     const tickWait = timeout == null
       ? () => {}
       : waitTick(timeout, () => {
-        // eslint-disable-next-line no-use-before-define
-        clearEvents();
-        if (!isCompleted) {
-          isCompleted = true;
+        complete(() => {
           reject(createError('socket connection timeout', 'ERR_SOCKET_CONNECTION_TIMEOUT'));
-        }
-        if (!socket.destroyed) {
-          socket.destroy();
-        }
+          if (!socket.destroyed) {
+            socket.destroy();
+          }
+        });
       });
 
     function removeEventSocketError() {
@@ -85,33 +90,27 @@ export default (
     function handleConnectOnSocket() {
       state.isEventConnectBind = false;
       tickWait();
-      clearEvents();
-      if (!isCompleted) {
-        isCompleted = true;
+      complete(() => {
         removeEventSocketError();
         resolve(socket);
-      }
+      });
     };
 
     function handleErrorOnSocket(error) {
-      clearEvents();
       tickWait();
-      if (!isCompleted) {
-        isCompleted = true;
+      complete(() => {
         reject(error);
-      }
+      });
     };
 
     function handleAbortOnSignal() {
-      clearEvents();
       tickWait();
-      if (!isCompleted) {
-        isCompleted = true;
+      complete(() => {
         reject(createError('abort', 'ABORT_ERR'));
-      }
-      if (!socket.destroyed) {
-        socket.destroy();
-      }
+        if (!socket.destroyed) {
+          socket.destroy();
+        }
+      });
     }
 
     socket.setNoDelay(true);
