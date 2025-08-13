@@ -114,14 +114,12 @@ export default (
       }
     }
 
-    socket.setNoDelay(true)
-      .on('error', handleErrorOnSocket);
+    socket.setNoDelay(true);
+    socket.on('error', handleErrorOnSocket);
 
-    if (socket instanceof tls.TLSSocket) {
-      socket.once('secureConnect', handleConnectOnSocket);
-    } else {
-      socket.once('connect', handleConnectOnSocket);
-    }
+    const connectEvent = socket instanceof tls.TLSSocket ? 'secureConnect' : 'connect';
+
+    socket.once(connectEvent, handleConnectOnSocket);
 
     if (!state.complete && signal) {
       state.isSignalEventBind = true;
