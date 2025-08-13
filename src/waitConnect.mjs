@@ -26,8 +26,9 @@ export default (
 
   return new Promise((resolve, reject) => {
     let isCompleted = false;
+    let tickWait;
+    let errorTimeoutId;
     const state = {
-      tickWithError: null,
       isSignalEventBind: false,
       isEventErrorBind: true,
       isEventConnectBind: true,
@@ -36,30 +37,22 @@ export default (
     const complete = (fn) => {
       if (isCompleted) return;
       isCompleted = true;
+      if (tickWait) {
+        tickWait();
+      }
       // eslint-disable-next-line no-use-before-define
       clearEvents();
       fn();
     };
 
-    const tickWait = timeout == null
-      ? () => {}
-      : waitTick(timeout, () => {
-        complete(() => {
-          reject(createError('socket connection timeout', 'ERR_SOCKET_CONNECTION_TIMEOUT'));
-          if (!socket.destroyed) {
-            socket.destroy();
-          }
-        });
-      });
-
     function removeEventSocketError() {
-      if (state.tickWithError) {
-        clearTimeout(state.tickWithError);
-        state.tickWithError = null;
+      if (errorTimeoutId) {
+        clearTimeout(errorTimeoutId);
+        errorTimeoutId = null;
       }
       if (state.isEventErrorBind) {
-        state.tickWithError = setTimeout(() => {
-          state.tickWithError = null;
+        errorTimeoutId = setTimeout(() => {
+          errorTimeoutId = null;
           if (state.isEventErrorBind) {
             state.isEventErrorBind = false;
             // eslint-disable-next-line no-use-before-define
@@ -74,7 +67,7 @@ export default (
         state.isEventConnectBind = false;
         if (socket instanceof tls.TLSSocket) {
           // eslint-disable-next-line no-use-before-define
-          socket.once('secureConnect', handleConnectOnSocket);
+          socket.off('secureConnect', handleConnectOnSocket);
         } else {
           // eslint-disable-next-line no-use-before-define
           socket.off('connect', handleConnectOnSocket);
@@ -89,7 +82,6 @@ export default (
 
     function handleConnectOnSocket() {
       state.isEventConnectBind = false;
-      tickWait();
       complete(() => {
         removeEventSocketError();
         resolve(socket);
@@ -97,19 +89,28 @@ export default (
     };
 
     function handleErrorOnSocket(error) {
-      tickWait();
       complete(() => {
         reject(error);
       });
     };
 
     function handleAbortOnSignal() {
-      tickWait();
       complete(() => {
-        reject(createError('abort', 'ABORT_ERR'));
         if (!socket.destroyed) {
           socket.destroy();
         }
+        reject(createError('abort', 'ABORT_ERR'));
+      });
+    }
+
+    if (timeout != null) {
+      tickWait = waitTick(timeout, () => {
+        complete(() => {
+          if (!socket.destroyed) {
+            socket.destroy();
+          }
+          reject(createError('socket connection timeout', 'ERR_SOCKET_CONNECTION_TIMEOUT'));
+        });
       });
     }
 
