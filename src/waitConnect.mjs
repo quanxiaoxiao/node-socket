@@ -25,8 +25,8 @@ export default (
   checkSocketEnable(socket);
 
   return new Promise((resolve, reject) => {
+    let isCompleted = false;
     const state = {
-      complete: false,
       tickWithError: null,
       isSignalEventBind: false,
       isEventErrorBind: true,
@@ -38,8 +38,8 @@ export default (
       : waitTick(timeout, () => {
         // eslint-disable-next-line no-use-before-define
         clearEvents();
-        if (!state.complete) {
-          state.complete = true;
+        if (!isCompleted) {
+          isCompleted = true;
           reject(createError('socket connection timeout', 'ERR_SOCKET_CONNECTION_TIMEOUT'));
         }
         if (!socket.destroyed) {
@@ -86,8 +86,8 @@ export default (
       state.isEventConnectBind = false;
       tickWait();
       clearEvents();
-      if (!state.complete) {
-        state.complete = true;
+      if (!isCompleted) {
+        isCompleted = true;
         removeEventSocketError();
         resolve(socket);
       }
@@ -96,8 +96,8 @@ export default (
     function handleErrorOnSocket(error) {
       clearEvents();
       tickWait();
-      if (!state.complete) {
-        state.complete = true;
+      if (!isCompleted) {
+        isCompleted = true;
         reject(error);
       }
     };
@@ -105,8 +105,8 @@ export default (
     function handleAbortOnSignal() {
       clearEvents();
       tickWait();
-      if (!state.complete) {
-        state.complete = true;
+      if (!isCompleted) {
+        isCompleted = true;
         reject(createError('abort', 'ABORT_ERR'));
       }
       if (!socket.destroyed) {
@@ -118,10 +118,9 @@ export default (
     socket.on('error', handleErrorOnSocket);
 
     const connectEvent = socket instanceof tls.TLSSocket ? 'secureConnect' : 'connect';
-
     socket.once(connectEvent, handleConnectOnSocket);
 
-    if (!state.complete && signal) {
+    if (!isCompleted && signal) {
       state.isSignalEventBind = true;
       signal.addEventListener('abort', handleAbortOnSignal, { once: true });
     }
