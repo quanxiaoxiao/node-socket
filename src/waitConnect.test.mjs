@@ -58,7 +58,7 @@ test('waitConnect 1', async () => {
 
     socket.connect({
       host: '127.0.0.1',
-      port: 9998,
+      port: 9997,
     });
     await waitConnect(socket);
     throw new Error('xxxx');
@@ -66,6 +66,7 @@ test('waitConnect 1', async () => {
   } catch (error) {
 
     assert(!socket.eventNames().includes('connect'));
+    console.log(error);
     assert(error.message !== 'xxxx');
     assert(socket.eventNames().includes('error'));
     assert(!!error.message.match(/ECONNREFUSED/));
@@ -85,7 +86,7 @@ test('waitConnect connect timeout', async () => {
 
     socket.connect({
       host: '192.168.101.66',
-      port: 9998,
+      port: 9997,
     });
     await waitConnect(socket, timeout);
     throw new Error('xxxx');
@@ -115,7 +116,7 @@ test('waitConnect connect signal abort', async () => {
 
     socket.connect({
       host: '192.168.101.66',
-      port: 9998,
+      port: 9997,
     });
     setTimeout(() => {
 
