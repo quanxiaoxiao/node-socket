@@ -19,9 +19,9 @@ const createConnector = (
 
   const socket = getConnect();
 
-  assert(socket);
-  assert(!socket.destroyed);
-  assert(socket.writable && socket.readable);
+  assert(socket, 'Socket is required');
+  assert(!socket.destroyed, 'Socket is already destroyed');
+  assert(socket.writable && socket.readable, 'Socket must be readable and writable');
 
   const {
     timeout,
