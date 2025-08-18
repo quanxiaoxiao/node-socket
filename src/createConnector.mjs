@@ -4,6 +4,22 @@ import process from 'node:process';
 
 import waitConnect from './waitConnect.mjs';
 
+const ConnectionState = {
+  IDLE: 'idle',
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  DETACHED: 'detached',
+  CLOSED: 'closed',
+  ERROR: 'error',
+};
+
+const DEFAULT_OPTIONS = {
+  keepAlive: true,
+  keepAliveInitialDelay: 60_000,
+  connectTimeout: 10_000,
+  errorCleanupDelay: 200,
+};
+
 const createConnector = (
   options,
   getConnect,
@@ -23,17 +39,8 @@ const createConnector = (
   assert(!socket.destroyed, 'Socket is already destroyed');
   assert(socket.writable && socket.readable, 'Socket must be readable and writable');
 
-  const {
-    timeout,
-    onConnect,
-    onData,
-    onDrain,
-    onClose,
-    onFinish,
-    onError,
-    keepAlive = true,
-    keepAliveInitialDelay = 1000 * 60,
-  } = options;
+  const config = { ...DEFAULT_OPTIONS, ...options };
+  const { timeout, onConnect, onData, onDrain, onClose, onFinish, onError } = config;
 
   const state = {
     isActive: true,
@@ -50,6 +57,94 @@ const createConnector = (
     outgoingBufList: [],
     incomingBufList: [],
     tickWithError: null,
+
+    events: new Set(),
+    timers: new Map(),
+  };
+
+  const timer = {
+    set: (key, callback, delay) => {
+      timer.clear(key);
+      state.timers.set(key, setTimeout(callback, delay));
+    },
+
+    clear: (key) => {
+      const timerId = state.timers.get(key);
+      if (timerId) {
+        clearTimeout(timerId);
+        state.timers.delete(key);
+      }
+    },
+
+    clearAll: () => {
+      state.timers.forEach(timerId => clearTimeout(timerId));
+      state.timers.clear();
+    },
+  };
+
+  const eventManager = {
+    bind: (target, event, handler, once = false) => {
+      const eventKey = `${target.constructor.name}-${event}`;
+
+      if (state.events.has(eventKey)) return;
+
+      state.events.add(eventKey);
+      if (once) {
+        target.once(event, handler);
+      } else {
+        target.on(event, handler);
+      }
+    },
+
+    unbind: (target, event, handler) => {
+      const eventKey = `${target.constructor.name}-${event}`;
+
+      if (!state.events.has(eventKey)) return;
+
+      state.events.delete(eventKey);
+      target.off(event, handler);
+    },
+
+    unbindAll: () => {
+      const socketEvents = ['data', 'drain', 'timeout', 'finish', 'close', 'error'];
+      socketEvents.forEach((event) => {
+        socket.removeAllListeners(event);
+      });
+
+      if (signal) {
+        // eslint-disable-next-line no-use-before-define
+        signal.removeEventListener('abort', handleAbortOnSignal);
+      }
+
+      state.events.clear();
+    },
+  };
+
+  const stateManager = {
+    is: (status) => state.status === status,
+
+    canTransitionTo: (newStatus) => {
+      const validTransitions = {
+        [ConnectionState.IDLE]: [ConnectionState.CONNECTING, ConnectionState.ERROR, ConnectionState.CLOSED],
+        [ConnectionState.CONNECTING]: [ConnectionState.CONNECTED, ConnectionState.ERROR, ConnectionState.CLOSED],
+        [ConnectionState.CONNECTED]: [ConnectionState.DETACHED, ConnectionState.ERROR, ConnectionState.CLOSED],
+        [ConnectionState.DETACHED]: [ConnectionState.CLOSED],
+        [ConnectionState.ERROR]: [ConnectionState.CLOSED],
+        [ConnectionState.CLOSED]: [],
+      };
+
+      return validTransitions[state.status]?.includes(newStatus) || false;
+    },
+
+    transition: (newStatus) => {
+      if (stateManager.canTransitionTo(newStatus)) {
+        state.status = newStatus;
+        return true;
+      }
+      return false;
+    },
+
+    isActive: () => ![ConnectionState.CLOSED, ConnectionState.ERROR, ConnectionState.DETACHED].includes(state.status),
   };
 
   function removeEventSocketError() {
@@ -377,7 +472,7 @@ const createConnector = (
     return socket;
   };
 
-  function doConnect() {
+  function establishConnection() {
     state.isConnect = true;
     state.isSocketErrorEventBind = true;
     state.isSocketCloseEventBind = true;
@@ -385,8 +480,8 @@ const createConnector = (
       .on('error', handleErrorOnSocket)
       .once('close', handleCloseOnSocket);
 
-    if (keepAlive && socket.setKeepAlive) {
-      socket.setKeepAlive(true, keepAliveInitialDelay);
+    if (config.keepAlive && socket.setKeepAlive) {
+      socket.setKeepAlive(true, config.keepAliveInitialDelay);
     }
 
     process.nextTick(() => {
@@ -397,12 +492,12 @@ const createConnector = (
   }
 
   if (socket.readyState === 'opening') {
-    waitConnect(socket, 1000 * 10, controller.signal)
+    waitConnect(socket, config.connectTimeout, controller.signal)
       .then(
         () => {
           assert(state.isActive);
           if (!state.isDetach) {
-            doConnect();
+            establishConnection();
           }
         },
         (error) => {
@@ -420,7 +515,7 @@ const createConnector = (
       );
 
   } else {
-    doConnect();
+    establishConnection();
   }
 
   if (signal) {
@@ -429,6 +524,8 @@ const createConnector = (
   }
 
   connector.socket = socket;
+
+  connector.getState = () => ({ ...state, status: state.status });
 
   return connector;
 };
