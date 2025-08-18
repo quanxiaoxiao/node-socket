@@ -115,21 +115,22 @@ export default (
     }
   };
 
+  const handlePipeReady = async () => {
+    if (isPipeReady()) {
+      cleanupTimer();
+      if (onConnect) {
+        await onConnect(getState());
+      }
+    }
+  };
+
   state.source = createConnector(
     {
       ...other,
       onConnect: async () => {
-        assert(!controller.signal.aborted);
+        assert(!controller.signal.aborted, 'Operation was aborted');
         state.timeConnectOnSource = performance.now();
-        if (isPipeReady()) {
-          if (state.tick != null) {
-            state.tick();
-            state.tick = null;
-          }
-          if (onConnect) {
-            await onConnect(getState());
-          }
-        }
+        await handlePipeReady();
       },
       onData: (chunk) => {
         if (onOutgoing) {
@@ -158,15 +159,7 @@ export default (
       onConnect: async () => {
         assert(!controller.signal.aborted, 'Operation was aborted');
         state.timeConnectOnDest = performance.now();
-        if (isPipeReady()) {
-          if (state.tick != null) {
-            state.tick();
-            state.tick = null;
-          }
-          if (onConnect) {
-            await onConnect(getState());
-          }
-        }
+        await handlePipeReady();
       },
       onData: (chunk) => {
         if (onIncoming) {
