@@ -48,7 +48,7 @@ const createConnector = (
 
     isActive: true,
     isConnect: false,
-    isDetach: false,
+    isDetached: false,
     isSocketDataEventBind: false,
     isConnectActive: false,
     isSocketTimeoutEventBind: false,
@@ -231,7 +231,7 @@ const createConnector = (
 
     if (state.isActive) {
       state.isActive = false;
-      if (!state.isDetach && !socket.writableEnded) {
+      if (!state.isDetached && !socket.writableEnded) {
         emitError(error);
       }
     }
@@ -244,7 +244,7 @@ const createConnector = (
   }
 
   function handleDrainOnSocket() {
-    if (!state.isDetach && state.isActive && onDrain) {
+    if (!state.isDetached && state.isActive && onDrain) {
       onDrain();
     }
   }
@@ -264,7 +264,7 @@ const createConnector = (
   async function handleConnectOnSocket() {
     assert(state.isActive);
     assert(state.isConnect);
-    assert(!state.isDetach);
+    assert(!state.isDetached);
     if (onConnect) {
       try {
         await onConnect();
@@ -302,7 +302,7 @@ const createConnector = (
       state.isSocketDrainEventBind = true;
       socket.on('drain', handleDrainOnSocket);
       process.nextTick(() => {
-        if (state.isActive && !state.isDetach && !socket.writableEnded) {
+        if (state.isActive && !state.isDetached && !socket.writableEnded) {
           state.isConnectActive = true;
           if (socket.isPaused()) {
             socket.resume();
@@ -391,7 +391,7 @@ const createConnector = (
     state.isSignalEventBind = false;
     if (state.isActive) {
       state.isActive = false;
-      if (!state.isDetach) {
+      if (!state.isDetached) {
         const error = new Error('abort');
         error.code = 'ABORT_ERR';
         emitError(error);
@@ -401,12 +401,12 @@ const createConnector = (
   }
 
   connector.pause = () => {
-    if (!state.isDetach && state.isActive && !socket.isPaused()) {
+    if (!state.isDetached && state.isActive && !socket.isPaused()) {
       socket.pause();
     }
   };
   connector.resume = () => {
-    if (!state.isDetach && state.isActive && socket.isPaused()) {
+    if (!state.isDetached && state.isActive && socket.isPaused()) {
       socket.resume();
     }
   };
@@ -414,7 +414,7 @@ const createConnector = (
   connector.write = (chunk) => {
     assert(state.isActive && !socket.writableEnded);
     assert(!state.isSocketFinishEventBind);
-    assert(!state.isDetach);
+    assert(!state.isDetached);
     if (!state.isConnectActive) {
       state.outgoingBufList.push(chunk);
       return false;
@@ -428,7 +428,7 @@ const createConnector = (
   connector.end = (chunk) => {
     assert(state.isActive && !socket.writableEnded);
     assert(!state.isSocketFinishEventBind);
-    assert(!state.isDetach);
+    assert(!state.isDetached);
     if (!state.isConnect) {
       state.isActive = false;
       checkConnectSignalAbort();
@@ -457,14 +457,14 @@ const createConnector = (
   };
 
   connector.detach = () => {
-    if (!state.isActive || socket.writableEnded || state.isDetach) {
+    if (!state.isActive || socket.writableEnded || state.isDetached) {
       return null;
     }
     if (!state.isConnect) {
       connector();
       return null;
     }
-    state.isDetach = true;
+    state.isDetached = true;
     unbindSocketCloseEvent();
     clearSocketEvents();
     unbindEventSignal();
@@ -488,7 +488,7 @@ const createConnector = (
     }
 
     process.nextTick(() => {
-      if (!state.isDetach && state.isActive) {
+      if (!state.isDetached && state.isActive) {
         handleConnectOnSocket();
       }
     });
@@ -496,26 +496,24 @@ const createConnector = (
 
   if (socket.readyState === 'opening') {
     waitConnect(socket, config.connectTimeout, controller.signal)
-      .then(
-        () => {
-          assert(state.isActive);
-          if (!state.isDetach) {
-            establishConnection();
+      .then(() => {
+        assert(state.isActive);
+        if (!state.isDetached) {
+          establishConnection();
+        }
+      })
+      .catch((error) => {
+        unbindEventSignal();
+        if (!socket.destroyed) {
+          socket.destroy();
+        }
+        if (state.isActive) {
+          state.isActive = false;
+          if (!controller.signal.aborted) {
+            emitError(error);
           }
-        },
-        (error) => {
-          unbindEventSignal();
-          if (!socket.destroyed) {
-            socket.destroy();
-          }
-          if (state.isActive) {
-            state.isActive = false;
-            if (!controller.signal.aborted) {
-              emitError(error);
-            }
-          }
-        },
-      );
+        }
+      });
 
   } else {
     establishConnection();
