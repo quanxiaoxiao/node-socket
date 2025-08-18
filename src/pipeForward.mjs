@@ -46,11 +46,8 @@ export default (
     timeConnectOnDest: null,
   };
 
-  const isPipe = () => {
-    if (state.timeConnectOnSource == null || state.timeConnectOnDest == null) {
-      return false;
-    }
-    return true;
+  const isPipeReady = () => {
+    return state.timeConnectOnSource != null && state.timeConnectOnDest != null;
   };
 
   const getState = () => {
@@ -80,7 +77,7 @@ export default (
       onConnect: async () => {
         assert(!controller.signal.aborted);
         state.timeConnectOnSource = performance.now();
-        if (isPipe()) {
+        if (isPipeReady()) {
           if (state.tick != null) {
             state.tick();
             state.tick = null;
@@ -98,7 +95,7 @@ export default (
           return false;
         }
         const ret = state.dest.write(chunk);
-        if (!isPipe()) {
+        if (!isPipeReady()) {
           return false;
         }
         return ret;
@@ -108,7 +105,7 @@ export default (
       },
       onClose: () => {
         assert(!controller.signal.aborted);
-        if (!isPipe()) {
+        if (!isPipeReady()) {
           const error = new Error('Pipe connect fail, source socket is close, but dest socket is not connect');
           error.code = 'ERR_SOCKET_PIPE_SOURCE_CLOSE';
           throw error;
@@ -141,7 +138,7 @@ export default (
       onConnect: async () => {
         assert(!controller.signal.aborted);
         state.timeConnectOnDest = performance.now();
-        if (isPipe()) {
+        if (isPipeReady()) {
           if (state.tick != null) {
             state.tick();
             state.tick = null;
@@ -159,7 +156,7 @@ export default (
           return false;
         }
         const ret = state.source.write(chunk);
-        if (!isPipe()) {
+        if (!isPipeReady()) {
           return false;
         }
         return ret;
@@ -170,7 +167,7 @@ export default (
       onClose: () => {
         assert(!controller.signal.aborted);
 
-        if (!isPipe()) {
+        if (!isPipeReady()) {
           const error = new Error('Pipe connect fail, dest socket is close, but souce socket is not connect');
           error.code = 'ERR_SOCKET_PIPE_DEST_CLOSE';
           throw new Error(error);
@@ -206,7 +203,7 @@ export default (
 
   state.tick = waitTick(DEFAULT_TIMEOUT, () => {
     state.tick = null;
-    if (!controller.signal.aborted && !isPipe()) {
+    if (!controller.signal.aborted && !isPipeReady()) {
       controller.abort();
       if (onError) {
         const error = new Error('Connect Pipe fail');
