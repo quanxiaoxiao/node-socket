@@ -9,10 +9,10 @@ const createConnector = (
   getConnect,
   signal,
 ) => {
-  assert(typeof getConnect === 'function');
+  assert(typeof getConnect === 'function', 'getConnect must be a function');
 
   if (signal) {
-    assert(!signal.aborted);
+    assert(!signal.aborted, 'AbortSignal is already aborted');
   }
 
   const controller = new AbortController();
