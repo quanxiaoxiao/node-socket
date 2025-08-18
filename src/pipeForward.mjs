@@ -93,6 +93,28 @@ export default (
     }
   };
 
+  const handleClose = (socketType) => {
+    if (controller.signal.aborted) return;
+
+    if (!isPipeReady()) {
+      const error = createError(
+        ERROR_CODES[`${socketType.toUpperCase()}_CLOSE`],
+        ERROR_MESSAGES[`${socketType.toUpperCase()}_CLOSE`],
+      );
+      throw error;
+    }
+
+    const otherSocket = socketType === 'source' ? state.dest : state.source;
+    if (!otherSocket.socket.writableEnded) {
+      otherSocket.end();
+    }
+
+    if (!state.isCloseEmitted && onClose) {
+      state.isCloseEmitted = true;
+      onClose(getState());
+    }
+  };
+
   state.source = createConnector(
     {
       ...other,
@@ -122,24 +144,8 @@ export default (
         }
         return ret;
       },
-      onDrain: () => {
-        state.dest?.resume();
-      },
-      onClose: () => {
-        assert(!controller.signal.aborted);
-        if (!isPipeReady()) {
-          const error = new Error('Pipe connect fail, source socket is close, but dest socket is not connect');
-          error.code = 'ERR_SOCKET_PIPE_SOURCE_CLOSE';
-          throw error;
-        }
-        if (!state.dest.socket.writableEnded) {
-          state.dest.end();
-        }
-        if (!state.isCloseEmitted && onClose) {
-          state.isCloseEmitted = true;
-          onClose(getState());
-        }
-      },
+      onDrain: () => state.dest?.resume(),
+      onClose: () => handleClose('source'),
       onError: handleError,
     },
     getSourceSocket,
@@ -175,26 +181,8 @@ export default (
         }
         return ret;
       },
-      onDrain: () => {
-        state.source?.resume();
-      },
-      onClose: () => {
-        assert(!controller.signal.aborted);
-
-        if (!isPipeReady()) {
-          const error = new Error('Pipe connect fail, dest socket is close, but souce socket is not connect');
-          error.code = 'ERR_SOCKET_PIPE_DEST_CLOSE';
-          throw new Error(error);
-        }
-
-        if (!state.source.socket.writableEnded) {
-          state.source.end();
-        }
-        if (!state.isCloseEmitted && onClose) {
-          state.isCloseEmitted = true;
-          onClose(getState());
-        }
-      },
+      onDrain: () => state.source?.resume(),
+      onClose: () => handleClose('dest'),
       onError: handleError,
     },
     getDestSocket,
