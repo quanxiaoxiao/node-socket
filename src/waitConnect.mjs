@@ -28,6 +28,7 @@ export default (
     let isCompleted = false;
     let tickWait;
     let errorTimeoutId;
+
     const state = {
       isSignalEventBind: false,
       isEventErrorBind: true,
