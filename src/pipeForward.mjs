@@ -4,13 +4,26 @@ import { waitTick } from '@quanxiaoxiao/utils';
 
 import createConnector from './createConnector.mjs';
 
+const DEFAULT_TIMEOUT = 15_000; // 15秒
+const ERROR_CODES = {
+  SOURCE_CLOSE: 'ERR_SOCKET_PIPE_SOURCE_CLOSE',
+  DEST_CLOSE: 'ERR_SOCKET_PIPE_DEST_CLOSE',
+  TIMEOUT: 'ERR_SOCKET_PIPE_TIMEOUT',
+};
+
+const ERROR_MESSAGES = {
+  SOURCE_CLOSE: 'Pipe connect fail, source socket is closed, but dest socket is not connected',
+  DEST_CLOSE: 'Pipe connect fail, dest socket is closed, but source socket is not connected',
+  TIMEOUT: 'Connect Pipe failed due to timeout',
+};
+
 export default (
   getSourceSocket,
   getDestSocket,
   options = {},
 ) => {
-  assert(typeof getSourceSocket === 'function');
-  assert(typeof getDestSocket === 'function');
+  assert(typeof getSourceSocket === 'function', 'getSourceSocket must be a function');
+  assert(typeof getDestSocket === 'function', 'getDestSocket must be a function');
 
   const {
     onConnect,
@@ -27,8 +40,8 @@ export default (
     tick: null,
     source: null,
     dest: null,
-    isCloseEmit: false,
-    performanceNow: performance.now(),
+    isCloseEmitted: false,
+    performanceStart: performance.now(),
     timeConnectOnSource: null,
     timeConnectOnDest: null,
   };
@@ -48,11 +61,11 @@ export default (
     };
 
     if (state.timeConnectOnSource != null) {
-      result.timeConnectOnSource = state.timeConnectOnSource - state.performanceNow;
+      result.timeConnectOnSource = state.timeConnectOnSource - state.performanceStart;
     }
 
     if (state.timeConnectOnDest != null) {
-      result.timeConnectOnDest = state.timeConnectOnDest - state.performanceNow;
+      result.timeConnectOnDest = state.timeConnectOnDest - state.performanceStart;
     }
 
     if (result.timeConnectOnDest != null && result.timeConnectOnSource != null) {
@@ -103,8 +116,8 @@ export default (
         if (!state.dest.socket.writableEnded) {
           state.dest.end();
         }
-        if (!state.isCloseEmit && onClose) {
-          state.isCloseEmit = true;
+        if (!state.isCloseEmitted && onClose) {
+          state.isCloseEmitted = true;
           onClose(getState());
         }
       },
@@ -166,8 +179,8 @@ export default (
         if (!state.source.socket.writableEnded) {
           state.source.end();
         }
-        if (!state.isCloseEmit && onClose) {
-          state.isCloseEmit = true;
+        if (!state.isCloseEmitted && onClose) {
+          state.isCloseEmitted = true;
           onClose(getState());
         }
       },
@@ -191,7 +204,7 @@ export default (
     }
   }, { once: true });
 
-  state.tick = waitTick(1000 * 15, () => {
+  state.tick = waitTick(DEFAULT_TIMEOUT, () => {
     state.tick = null;
     if (!controller.signal.aborted && !isPipe()) {
       controller.abort();
