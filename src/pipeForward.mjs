@@ -84,6 +84,15 @@ export default (
     }
   };
 
+  const handleError = (error) => {
+    if (!controller.signal.aborted) {
+      controller.abort();
+      if (onError) {
+        onError(error, getState());
+      }
+    }
+  };
+
   state.source = createConnector(
     {
       ...other,
@@ -114,7 +123,7 @@ export default (
         return ret;
       },
       onDrain: () => {
-        state.dest.resume();
+        state.dest?.resume();
       },
       onClose: () => {
         assert(!controller.signal.aborted);
@@ -131,15 +140,7 @@ export default (
           onClose(getState());
         }
       },
-      onError: (error) => {
-        if (!controller.signal.aborted) {
-          controller.abort();
-          if (onError) {
-            onError(error, getState());
-          }
-        }
-
-      },
+      onError: handleError,
     },
     getSourceSocket,
     controller.signal,
@@ -149,7 +150,7 @@ export default (
     {
       ...other,
       onConnect: async () => {
-        assert(!controller.signal.aborted);
+        assert(!controller.signal.aborted, 'Operation was aborted');
         state.timeConnectOnDest = performance.now();
         if (isPipeReady()) {
           if (state.tick != null) {
@@ -175,7 +176,7 @@ export default (
         return ret;
       },
       onDrain: () => {
-        state.source.resume();
+        state.source?.resume();
       },
       onClose: () => {
         assert(!controller.signal.aborted);
@@ -194,14 +195,7 @@ export default (
           onClose(getState());
         }
       },
-      onError: (error) => {
-        if (!controller.signal.aborted) {
-          controller.abort();
-          if (onError) {
-            onError(error, getState());
-          }
-        }
-      },
+      onError: handleError,
     },
     getDestSocket,
     controller.signal,
