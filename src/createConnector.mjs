@@ -8,6 +8,7 @@ const ConnectionState = {
   IDLE: 'idle',
   CONNECTING: 'connecting',
   CONNECTED: 'connected',
+
   DETACHED: 'detached',
   CLOSED: 'closed',
   ERROR: 'error',
@@ -43,6 +44,8 @@ const createConnector = (
   const { timeout, onConnect, onData, onDrain, onClose, onFinish, onError } = config;
 
   const state = {
+    status: ConnectionState.IDLE,
+
     isActive: true,
     isConnect: false,
     isDetach: false,
