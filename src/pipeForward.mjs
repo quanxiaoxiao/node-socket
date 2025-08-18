@@ -50,6 +50,12 @@ export default (
     return state.timeConnectOnSource != null && state.timeConnectOnDest != null;
   };
 
+  const createError = (code, message) => {
+    const error = new Error(message);
+    error.code = code;
+    return error;
+  };
+
   const getState = () => {
     const result = {
       timeConnectOnSource: null,
@@ -69,6 +75,13 @@ export default (
       result.timeConnect = Math.max(result.timeConnectOnSource, result.timeConnectOnDest);
     }
     return result;
+  };
+
+  const cleanupTimer = () => {
+    if (state.tick != null) {
+      state.tick();
+      state.tick = null;
+    }
   };
 
   state.source = createConnector(
@@ -194,20 +207,14 @@ export default (
     controller.signal,
   );
 
-  controller.signal.addEventListener('abort', () => {
-    if (state.tick != null) {
-      state.tick();
-      state.tick = null;
-    }
-  }, { once: true });
+  controller.signal.addEventListener('abort', cleanupTimer, { once: true });
 
   state.tick = waitTick(DEFAULT_TIMEOUT, () => {
     state.tick = null;
     if (!controller.signal.aborted && !isPipeReady()) {
       controller.abort();
       if (onError) {
-        const error = new Error('Connect Pipe fail');
-        error.code = 'ERR_SOCKET_PIPE_TIMEOUT';
+        const error = createError(ERROR_CODES.TIMEOUT, ERROR_MESSAGES.TIMEOUT);
         onError(error, getState());
       }
     }
