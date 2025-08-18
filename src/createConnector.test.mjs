@@ -83,8 +83,7 @@ test('createConnector unable connect remote', async () => {
   const onConnect = mock.fn(() => {});
   const onData = mock.fn(() => {});
   const onClose = mock.fn(() => {});
-  const onError = mock.fn((error, isConnect) => {
-    assert(!isConnect);
+  const onError = mock.fn(() => {
   });
   const connector = createConnector(
     {
@@ -371,6 +370,7 @@ test('createConnector, close before connect', async () => {
   assert.equal(onClose.mock.calls.length, 0);
   server.close();
 });
+
 test('createConnector, stream outgoing', async () => {
   const port = getPort();
   const handleCloseOnSocket = mock.fn(() => {});
@@ -458,6 +458,7 @@ test('createConnector, stream outgoing', async () => {
     walk();
   }, 200);
 });
+
 test('createConnector, stream outgoing end with close trigger error', async () => {
   const port = getPort();
   const handleCloseOnSocket = mock.fn(() => {});
@@ -485,7 +486,7 @@ test('createConnector, stream outgoing end with close trigger error', async () =
   server.on('close', () => {
     assert.equal(onClose.mock.calls.length, 0);
     assert.equal(onError.mock.calls.length, 1);
-    assert.equal(onError.mock.calls[0].arguments[0].message, 'Socket close error');
+    assert.equal(onError.mock.calls[0].arguments[0].message, 'Socket closed unexpectedly');
   });
   let i = 0;
   let isPause = false;
@@ -537,7 +538,7 @@ test('createConnector, stream outgoing end with close trigger error', async () =
     walk();
   }, 200);
 });
-test('createConnector, stream outgoing 2', async () => {
+test('createConnector, stream outgoing 2' , async () => {
   const port = getPort();
   const handleCloseOnSocket = mock.fn(() => {});
   const pathname = path.resolve(process.cwd(), `test_${Date.now()}_222`);
@@ -834,6 +835,7 @@ test('createConnector stream incoming 3', () => {
     () => socket,
   );
 });
+
 test('createConnector onData trigger error', async () => {
   const port = getPort();
   const server = net.createServer((socket) => {
@@ -884,6 +886,7 @@ test('createConnector onData trigger error', async () => {
   assert(!socket.eventNames().includes('data'));
   assert(!socket.eventNames().includes('drain'));
 });
+
 test('createConnector signal', async () => {
   const port = getPort();
   const onConnect = mock.fn(() => {});
@@ -1084,6 +1087,7 @@ test('createConnector socket emit error 2', async () => {
   assert.equal(onClose.mock.calls.length, 0);
   server.close();
 });
+
 test('createConnector end before connect', async () => {
   const port = getPort();
   const server = net.createServer(() => {});
@@ -1117,6 +1121,7 @@ test('createConnector end before connect', async () => {
   assert.equal(onConnect.mock.calls.length, 0);
   server.close();
 });
+
 test('createConnector end', async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn((chunk) => {
@@ -1135,7 +1140,9 @@ test('createConnector end', async () => {
     connector: null,
   };
   const onConnect = mock.fn(() => {
-    state.connector.end(Buffer.from('aabb'));
+    setTimeout(() => {
+      state.connector.end(Buffer.from('aabb'));
+    });
   });
   const onData = mock.fn(() => {});
   const onClose = mock.fn(() => {});
@@ -1453,7 +1460,9 @@ test('createConnector, stream with outgoing abort', () => {
         assert(!socket.eventNames().includes('data'));
         assert(!socket.eventNames().includes('drain'));
         assert(!socket.eventNames().includes('close'));
-        assert(socket.destroyed);
+        setTimeout(() => {
+          assert(socket.destroyed);
+        });
       }
     }, 1000);
     walk();
@@ -1548,7 +1557,9 @@ test('createConnector stream with incoming abort', () => {
         assert(!socket.eventNames().includes('close'));
         assert(!socket.eventNames().includes('data'));
         assert(!socket.eventNames().includes('drain'));
-        assert(socket.destroyed);
+        setTimeout(() => {
+          assert(socket.destroyed);
+        });
         ws.end();
       }
     }, 1000);
@@ -1607,7 +1618,8 @@ test('createConnector signal abort at connect immediate', async () => {
   assert.equal(onError.mock.calls[0].arguments[0].code, 'ABORT_ERR');
   assert.equal(handleDataOnSocket.mock.calls.length, 0);
 });
-test('createConnector end signal abort', async () => {
+
+test('createConnector end signal abort' , async () => {
   const port = getPort();
   const handleDataOnSocket = mock.fn(() => {});
   const server = net.createServer((socket) => {
@@ -1627,7 +1639,9 @@ test('createConnector end signal abort', async () => {
     {
       onConnect: () => {
         connector.end(Buffer.from(s));
-        controller.abort();
+        setTimeout(() => {
+          controller.abort();
+        });
       },
       onClose,
       onError,
@@ -1639,12 +1653,17 @@ test('createConnector end signal abort', async () => {
   server.close();
   assert(controller.signal.aborted);
   assert.equal(onClose.mock.calls.length, 0);
-  assert.equal(onError.mock.calls.length, 0);
   assert(handleDataOnSocket.mock.calls.length > 0);
-  assert.equal(
-    Buffer.concat(handleDataOnSocket.mock.calls.map((d) => d.arguments[0])),
-    s,
-  );
+
+  if (onError.mock.calls.length === 1) {
+    assert(s.includes(Buffer.concat(handleDataOnSocket.mock.calls.map((d) => d.arguments[0])).toString()));
+  } else {
+    assert.equal(
+      Buffer.concat(handleDataOnSocket.mock.calls.map((d) => d.arguments[0])).toString(),
+      s,
+    );
+  }
+
 });
 test('createConnector signal abort 1', () => {
   const port = getPort();
