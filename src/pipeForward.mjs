@@ -133,19 +133,17 @@ export default (
         await handlePipeReady();
       },
       onData: (chunk) => {
+        assert(state.dest);
         if (onOutgoing) {
           onOutgoing(chunk);
         }
         if (state.dest.socket.writableEnded) {
           return false;
         }
-        const ret = state.dest.write(chunk);
-        if (!isPipeReady()) {
-          return false;
-        }
-        return ret;
+        const writeResult = state.dest.write(chunk);
+        return isPipeReady() ? writeResult : false;
       },
-      onDrain: () => state.dest?.resume(),
+      onDrain: () => state.dest.resume(),
       onClose: () => handleClose('source'),
       onError: handleError,
     },
@@ -168,13 +166,10 @@ export default (
         if (state.source.socket.writableEnded) {
           return false;
         }
-        const ret = state.source.write(chunk);
-        if (!isPipeReady()) {
-          return false;
-        }
-        return ret;
+        const writeResult = state.source.write(chunk);
+        return isPipeReady() ? writeResult : false;
       },
-      onDrain: () => state.source?.resume(),
+      onDrain: () => state.source.resume(),
       onClose: () => handleClose('dest'),
       onError: handleError,
     },
@@ -194,4 +189,10 @@ export default (
       }
     }
   });
+
+  return {
+    abort: () => controller.abort(),
+    getState,
+    isPipeReady,
+  };
 };

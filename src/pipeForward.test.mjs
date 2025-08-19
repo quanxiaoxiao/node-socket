@@ -539,18 +539,15 @@ test('pipeForward onOutgoing', async () => {
 });
 
 test('pipeForward 2', () => {
-
   const port1 = getPort();
   const port2 = getPort();
   const count = 30000;
   const server1 = net.createServer((socket) => {
-
     const content = '-------socket1';
     let i = 0;
     setTimeout(() => {
 
       while (i < count) {
-
         const s = `${_.times(800).map(() => content).join('')}:${i}`;
         socket.write(s);
         i++;
