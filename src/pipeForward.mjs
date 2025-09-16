@@ -191,7 +191,11 @@ export default (
   });
 
   return {
-    abort: () => controller.abort(),
+    abort: () => {
+      if (!controller.signal.aborted) {
+        controller.abort();
+      }
+    },
     getState,
     isPipeReady,
   };
