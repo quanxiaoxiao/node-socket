@@ -127,6 +127,7 @@ export default (
   state.source = createConnector(
     {
       ...other,
+      setKeepAlive: true,
       onConnect: async () => {
         assert(!controller.signal.aborted, 'Operation was aborted');
         state.timeConnectOnSource = performance.now();
@@ -154,6 +155,7 @@ export default (
   state.dest = createConnector(
     {
       ...other,
+      setKeepAlive: true,
       onConnect: async () => {
         assert(!controller.signal.aborted, 'Operation was aborted');
         state.timeConnectOnDest = performance.now();

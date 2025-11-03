@@ -16,7 +16,7 @@ const ConnectionState = {
 };
 
 const DEFAULT_OPTIONS = {
-  keepAlive: true,
+  keepAlive: false,
   keepAliveInitialDelay: 60_000,
   connectTimeout: 10_000,
   errorCleanupDelay: 200,
@@ -329,7 +329,7 @@ const createConnector = (
     socket.on('error', handleErrorOnSocket);
     eventManager.bind(socket, 'close', handleCloseOnSocket, true);
 
-    if (config.keepAlive && socket.setKeepAlive) {
+    if (config.keepAlive && config.keepAliveInitialDelay) {
       socket.setKeepAlive(true, config.keepAliveInitialDelay);
     }
 
