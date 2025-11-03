@@ -31,6 +31,7 @@ export default (
     onError,
     onIncoming,
     onOutgoing,
+    timeout,
     ...other
   } = options;
 
@@ -118,6 +119,8 @@ export default (
   const handlePipeReady = async () => {
     if (isPipeReady()) {
       cleanupTimer();
+      state.source.socket.setTimeout(0);
+      state.dest.socket.setTimeout(0);
       if (onConnect) {
         await onConnect(getState());
       }
@@ -127,7 +130,7 @@ export default (
   state.source = createConnector(
     {
       ...other,
-      setKeepAlive: true,
+      keepAlive: true,
       onConnect: async () => {
         assert(!controller.signal.aborted, 'Operation was aborted');
         state.timeConnectOnSource = performance.now();
@@ -155,7 +158,7 @@ export default (
   state.dest = createConnector(
     {
       ...other,
-      setKeepAlive: true,
+      keepAlive: true,
       onConnect: async () => {
         assert(!controller.signal.aborted, 'Operation was aborted');
         state.timeConnectOnDest = performance.now();
@@ -181,7 +184,7 @@ export default (
 
   controller.signal.addEventListener('abort', cleanupTimer, { once: true });
 
-  state.tick = waitTick(DEFAULT_TIMEOUT, () => {
+  state.tick = waitTick(timeout || DEFAULT_TIMEOUT, () => {
     state.tick = null;
     if (!controller.signal.aborted && !isPipeReady()) {
       controller.abort();
